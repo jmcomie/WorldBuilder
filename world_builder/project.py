@@ -33,36 +33,48 @@ EXPECTED_CONTENTS: list[str] = [
     "graph.sqlite"
 ]
 
-class SupplementalDataTypes(StrEnum):
-    PROJECT_DATA: str = "project_data"
-    TILE_GROUP_DATA: str = "tile_group_data"
-
-
 # Supplemental data.
-class ProjectData(BaseModel):
-    asset_name: str
 
 
+class MapTileGroup(CreationGroup):
+    def iterate_children(self):
+        pass
 
-class MapRootGroup(CreationGroup):
-    pass
+    @property
+    def data(self) -> MapRoot:
+        return self.node.data
+
+    def generate_map_from_prompt(self, prompt: str, update_existing: bool = False):
+        # Currently not supported:
+        #    layers,
+        #    draw_width draw_height not equaling width and height
+        #    update_existing
+        if self.data.layer_names is not None:
+            raise ValueError("Layers are not supported yet.")
+        if self.data.draw_width != self.data.width or self.data.draw_height != self.data.height:
+            raise ValueError("Drawing width and height must equal width and height.")
+        if update_existing:
+            raise ValueError("Update existing is not supported yet.")
+
+        # We should have a single map matrix data object.
+
 
 
 class WorldBuilderProject(CreationProject):
     def __init__(self, creation_project: CreationProject):
         self._creation_project = creation_project
 
-    def list_map_roots(self) -> Iterator[MapRootGroup]:
+    def list_map_roots(self) -> Iterator[MapTileGroup]:
         for _edge, node in self._creation_project.root_group.node.get_out_nodes(
             edge_type_filter=[SystemEdgeType.contains],
             node_type_filter=[WorldBuilderNodeType.MAP_ROOT]
         ):
-            yield MapRootGroup(node)
+            yield MapTileGroup(node)
 
     @world_builder_registry
-    def new_map(self, map_root: MapRoot) -> MapRootGroup:
+    def new_map(self, map_root: MapRoot) -> MapTileGroup:
         node: Node = self._creation_project.root_group.add_new_node(WorldBuilderNodeType.MAP_ROOT, map_root)
-        return MapRootGroup(node)
+        return MapTileGroup(node)
 
 
 class WorldBuilderProjectLocator(LocalFileLocator):

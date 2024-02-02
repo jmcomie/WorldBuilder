@@ -43,7 +43,6 @@ def get_validate_new_project_id_fn(project_locator: WorldBuilderProjectLocator):
     return validate_new_project_id
 
 
-
 mode_question = [
     {
         'type': 'list',
@@ -88,17 +87,10 @@ new_questions = [
 
 ]
 
+
 open_questions = [
 
 ]
-
-
-def new_project():
-    pass
-
-
-def open_project(project_id: str, resource_locator: WorldBuilderProjectLocator) -> WorldBuilderProject:
-    return get_creation_project(project_id, resource_locator=resource_locator, project_class=WorldBuilderProject)
 
 
 def print_project_id_list(project_locator: WorldBuilderProjectLocator):
@@ -130,7 +122,7 @@ def main():
     elif answer[PromptOptions.USER_OPTION] == ModeOptions.OPEN_PROJECT:
         answer_open: dict = prompt(get_open_project_questions_list(project_locator.list_project_ids()))
         project_id: str = answer_open[PromptOptions.USER_OPTION]
-        project = open_project(project_id, project_locator)
+        project = get_creation_project(project_id, resource_locator=project_locator, project_class=WorldBuilderProject)
 
     if project:
         print(f"Project {project.project_node.id} opened.")
