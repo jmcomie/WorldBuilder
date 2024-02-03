@@ -4,11 +4,10 @@ from typing import Optional
 from pytmx import TiledMap, TiledTileset
 
 from gstk.creation.graph_registry import Message
-import world_builder.map_metadata
-
+import world_builder
 
 MAPS_DIRECTORY: str = "maps"
-MAP_FILENAME: str = "default.tmx"
+MAP_FILENAME: str = "map.tmx"
 
 
 class LayerNames(StrEnum):
@@ -22,7 +21,7 @@ def set_layer_data(layer_name, data: list[list[int]]):
 
 
 def get_tiled_map_by_asset_name(asset_name: str = "MiniWorldSprites") -> TiledMap:
-    return TiledMap(filename=Path(world_builder.map_metadata.__file__).parent / asset_name / MAPS_DIRECTORY / MAP_FILENAME)
+    return TiledMap(filename=Path(world_builder.__file__).parent / "map_metadata_templates" / asset_name / MAPS_DIRECTORY / MAP_FILENAME)
 
 
 def generate_map_chat_context(map: TiledMap):

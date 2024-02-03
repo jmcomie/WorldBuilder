@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator, root_validator
 from gstk.user_registries.story.graph_registry import StoryNodeRegistry, StoryEdgeRegistry
 from gstk.graph.registry import EdgeRegistry, NodeRegistry
 from gstk.creation.graph_registry import CreationNode
-from gstk.graph.system_graph_registry import SystemEdgeType
+from gstk.graph.system_graph_registry import SystemEdgeType, SystemNodeType
 from gstk.creation.graph_registry import Message, Role
 
 
@@ -67,10 +67,8 @@ DrawDimensionInt = Literal[3, 4, 5, 6, 7, 8]
 
 class MapRoot(BaseModel):
     name: str
-    asset_name: str
     layer_names: Optional[list[str]] = None
-    draw_width: DrawDimensionInt
-    draw_height: DrawDimensionInt
+    draw_diameter: DrawDimensionInt
     width: int
     height: int
  
@@ -81,12 +79,10 @@ class MapRoot(BaseModel):
     @root_validator(pre=True)
     @classmethod
     def validate_all_fields_at_the_same_time(cls, field_values):
-        if field_values["draw_width"] != field_values["draw_height"]:
-            raise ValueError(f"Draw width {field_values['draw_width']} and draw height {field_values['draw_height']} must be the same.")
-        if field_values["width"] % field_values["draw_width"] != 0:
-            raise ValueError(f"Width {field_values['width']} must be a multiple of draw_width {field_values['draw_width']}.")
-        if field_values["height"] % field_values["draw_height"] != 0:
-            raise ValueError(f"Height {field_values['height']} must be a multiple of draw_height {field_values['draw_height']}.")
+        if field_values["width"] % field_values["draw_diameter"] != 0:
+            raise ValueError(f"Width {field_values['width']} must be a multiple of draw_diameter {field_values['draw_diameter']}.")
+        if field_values["height"] % field_values["draw_diameter"] != 0:
+            raise ValueError(f"Height {field_values['height']} must be a multiple of draw_diameter {field_values['draw_diameter']}.")
         return field_values
 
 
@@ -109,7 +105,14 @@ WorldBuilderNodeRegistry.register_node(
     model=DescriptionMatrixData,
 )
 
+WorldBuilderNodeRegistry.register_node(
+    WorldBuilderNodeType.MAP_ROOT,
+    model=MapRoot,
+)
+
+
 WorldBuilderEdgeRegistry.register_connection_types(CreationNode.group, WorldBuilderNodeType.MAP_ROOT, [SystemEdgeType.contains, SystemEdgeType.references])
+#WorldBuilderEdgeRegistry.register_connection_types(SystemNodeType.project, WorldBuilderNodeType.MAP_ROOT, [SystemEdgeType.contains, SystemEdgeType.references])
 WorldBuilderEdgeRegistry.register_connection_types(WorldBuilderNodeType.MAP_ROOT, WorldBuilderNodeType.MAP_MATRIX, [SystemEdgeType.contains, SystemEdgeType.references])
 WorldBuilderEdgeRegistry.register_connection_types(WorldBuilderNodeType.MAP_ROOT, WorldBuilderNodeType.DESCRIPTION_MATRIX, [SystemEdgeType.contains, SystemEdgeType.references])
 WorldBuilderEdgeRegistry.register_connection_types(WorldBuilderNodeType.MAP_MATRIX, WorldBuilderNodeType.DESCRIPTION_MATRIX, [SystemEdgeType.contains, SystemEdgeType.references])
