@@ -1,4 +1,5 @@
 from enum import StrEnum
+from lib2to3.pytree import BasePattern
 import os
 from pathlib import Path
 import sys
@@ -37,6 +38,10 @@ EXPECTED_CONTENTS: list[str] = [
 
 
 class MapTileGroup(CreationGroup):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        #self.node = node
+
     def iterate_children(self):
         pass
 
@@ -56,11 +61,13 @@ class MapTileGroup(CreationGroup):
         if update_existing:
             raise ValueError("Update existing is not supported yet.")
 
+
         # We should have a single map matrix data object.
 
 
 
 class WorldBuilderProject(CreationProject):
+
     def __init__(self, creation_project: CreationProject):
         self._creation_project = creation_project
 
@@ -73,22 +80,51 @@ class WorldBuilderProject(CreationProject):
 
     @world_builder_registry
     def new_map(self, map_root: MapRoot) -> MapTileGroup:
+        if (map_root.asset_name):
+            pass
         node: Node = self._creation_project.root_group.add_new_node(WorldBuilderNodeType.MAP_ROOT, map_root)
+        # create asset group and an entry for every asset type
+        # how do we list assets
         return MapTileGroup(node)
 
 
-class WorldBuilderProjectLocator(LocalFileLocator):
-    def __init__(self):
-        self.base_path = Path.cwd()
+class WorldBuilderProjectDirectory(LocalFileLocator):
+    base_directory = Path("world_builder_data")
+    projects_directory_name = Path("projects")
+    assets_directory = Path("assets_for_world_builder")
+    base_directory_dot_filename = Path(".world_builder_root")
+
+    def get_ancestor_path_with_dot_file(self) -> Optional[Path]:
+        current_path = Path.cwd()
+        # Evaluate all ascending paths except the root.
+        while current_path != current_path.parent:
+            if (current_path / self.base_directory_dot_filename).exists():
+                return current_path
+            current_path = current_path.parent
+        return None
+
+    def _ensure_base_path(self) -> BasePattern:
+        base_path: Optional[Path] = self.get_ancestor_path_with_dot_file()
+        if base_path is None:
+            base_path = self.base_directory
+            if not base_path.exists():
+                base_path.mkdir(parents=True)
+            (base_path / self.base_directory_dot_filename).touch()
+            (base_path / self.assets_directory).mkdir(exist_ok=True)
+            (base_path / self.projects_directory_name).mkdir(exist_ok=True)
+        return base_path
+
+    def __init__(self, base_path: Optional[Path] = None):
+        self._base_path: Path = base_path if base_path is not None else self._ensure_base_path()
 
     def list_project_ids(self) -> list[str]:
         # Iterate all directories in cwd and check for the expected contents.
-        return [d for d in os.listdir(self.base_path) if all([os.path.exists(
+        return [d for d in os.listdir(Path(self.base_path) / self.projects_directory_name) if all([os.path.exists(
                 os.path.join(self.base_path, d, f)) for f in EXPECTED_CONTENTS])]
 
     def project_id_exists(self, project_id: str) -> bool:
         # print a warning to standard error if the project directory contains unexpected files or no files.
-        project_path: Path = self.base_path / project_id
+        project_path: Path = self.base_path / self.projects_directory_name / project_id
         if not project_path.is_dir():
             return False
         if not all([os.path.exists(os.path.join(project_path, f)) for f in EXPECTED_CONTENTS]):
@@ -101,4 +137,4 @@ class WorldBuilderProjectLocator(LocalFileLocator):
         return all(exist_mask)
 
     def get_project_resource_location(self, project_id: str) -> Path:
-        return self.base_path / project_id
+        return self.base_path / self.projects_directory_name / project_id

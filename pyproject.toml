@@ -12,6 +12,7 @@ python = ">=3.11,<3.13"
 pygame-ce = "^2.4.0"
 gstk = {path = "../../GenerativeStoryToolkit", develop = true}
 pyinquirer = "^1.0.3"
+pytmx = "^3.32"
 
 
 [build-system]

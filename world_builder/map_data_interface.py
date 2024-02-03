@@ -17,3 +17,4 @@ def generate_map_chat_context(map: TiledMap):
         for gid in range(tileset.firstgid, tileset.firstgid+tileset.tilecount):
             print(map.get_tile_properties_by_gid(gid))
 
+

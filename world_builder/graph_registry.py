@@ -97,7 +97,7 @@ class MapLayerRoot(BaseModel):
 WorldBuilderNodeRegistry.register_node(
     WorldBuilderNodeType.MAP_MATRIX,
     model=MapMatrixData,
-    system_message="""You are tasked with creating a 16x16 map for use in a videogame by representing
+    system_message="""You are tasked with creating a map for use in a videogame by representing
 one or more of the nodes for the videogame ground layer.  The ground layer contains:
 trees, grass, roads, foilage, water of various, sand.  The map should adhere to the description and you will
 get updates on making it more arty."""

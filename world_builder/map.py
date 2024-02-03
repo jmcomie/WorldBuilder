@@ -1,5 +1,6 @@
 from enum import StrEnum
 from pathlib import Path
+from typing import Optional
 from pytmx import TiledMap, TiledTileset
 
 from gstk.creation.graph_registry import Message
@@ -19,14 +20,32 @@ class LayerNames(StrEnum):
 def set_layer_data(layer_name, data: list[list[int]]):
     pass
 
+
 def get_tiled_map_by_asset_name(asset_name: str = "MiniWorldSprites") -> TiledMap:
     return TiledMap(filename=Path(world_builder.map_metadata.__file__).parent / asset_name / MAPS_DIRECTORY / MAP_FILENAME)
+
 
 def generate_map_chat_context(map: TiledMap):
     for tileset in map.tilesets:
         assert isinstance(tileset, TiledTileset)
         for gid in range(tileset.firstgid, tileset.firstgid+tileset.tilecount):
+            print(gid)
             print(map.get_tile_properties_by_gid(gid))
+
+
+def copy_map_files_to_path(path_to_tmx_file: Path|str, target_path: Path|str, copy_assets_from_path: Optional[Path|str] = None, ):
+    path_to_tmx_file = Path(path_to_tmx_file)
+    target_path = Path(target_path)
+    if path_to_assets is not None:
+        path_to_assets = Path(path_to_assets)
+    map = TiledMap(filename=path_to_tmx_file)
+
+    for tileset in map.tilesets:
+        #assert isinstance(tileset, TiledTileset)
+        #if path_to_assets is not None:
+        #    tileset.source = path_to_assets / tileset.source
+        #tileset.save(target_path / tileset.source)
+        pass
 
 # Write file.
 
