@@ -131,12 +131,15 @@ class MapTileGroup(CreationGroup):
         return (self._resource_location / MAP_METADATA_DIRNAME / str(self.node.id) / MAP_FILENAME).exists()
 
     def list_asset_templates(self) -> list[str]:
-        return os.listdir(Path(world_builder.__path__).parent / MAP_METADATA_TEMPLATES_DIRNAME)
+        print(Path(world_builder.__file__).parent / MAP_METADATA_TEMPLATES_DIRNAME)
+        for entry in os.listdir(Path(world_builder.__file__).parent / MAP_METADATA_TEMPLATES_DIRNAME):
+            if not entry.startswith(".") and not entry.startswith("_"):
+                yield entry
 
     def add_asset_from_template(self, asset_name: str):
         if asset_name not in self.list_asset_templates():
             raise ValueError(f"Asset template {asset_name} does not exist.")
-        asset_path: Path = Path(world_builder.__path__).parent / MAP_METADATA_TEMPLATES_DIRNAME / asset_name
+        asset_path: Path = Path(world_builder.__file__).parent / MAP_METADATA_TEMPLATES_DIRNAME / asset_name
         shutil.copytree(asset_path, self._resource_location / MAP_METADATA_DIRNAME / str(self.node.id))
 
 

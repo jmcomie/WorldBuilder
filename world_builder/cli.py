@@ -166,10 +166,10 @@ def get_new_map_name_and_diameter_questions_list(existing_map_names: list[str]) 
         },
     ]
 
-def get_validate_width_and_height_fn(dimensions: int):
+def get_validate_width_and_height_fn(draw_diameter: int):
     def validate_width_and_height(text: str):
-        if int(text) % dimensions != 0:
-            raise ValidationError(message=f"Width and height must be a multiple of {dimensions}.",
+        if int(text) % draw_diameter != 0:
+            raise ValidationError(message=f"Width and height must be a multiple of {draw_diameter}.",
                                   cursor_position=len(text))
         return True
     return validate_width_and_height
@@ -181,31 +181,43 @@ def get_map_asset_questions_list(project_resource_location: Path) -> list[dict]:
         {
             'type': 'list',
             'name': 'user_option',
-            'message': 'Asset selection. ',
-            'choices': ['Check asset']
+            'message': 'Asset selection.',
+            'choices': ['Select asset', 'Check asset']
         }
     ]
 
-def get_new_map_width_and_height_questions_list(dimensions: int) -> list[dict]:
+def get_asset_selection_questions_list(map_tile_group: MapTileGroup) -> list[dict]:
+    return [
+        {
+            'type': 'list',
+            'name': 'user_option',
+            'message': 'Select asset:',
+            'choices': map_tile_group.list_asset_templates()
+        }
+    ]
+
+def get_new_map_width_and_height_questions_list(draw_diameter: int) -> list[dict]:
     return [
         {
             'type': 'input',
             'name': 'width',
             'message': 'Map width:',
             'filter': lambda val: int(val),
-            'validate': get_validate_width_and_height_fn(dimensions)
+            'validate': get_validate_width_and_height_fn(draw_diameter)
         },
         {
             'type': 'input',
             'name': 'height',
             'message': 'Map height:',
             'filter': lambda val: int(val),
-            'validate': get_validate_width_and_height_fn(dimensions)
+            'validate': get_validate_width_and_height_fn(draw_diameter)
         },
     ]
 
 def main():
     project_locator = WorldBuilderProjectDirectory()
+
+    # Project selection
     answer: dict = prompt(get_open_project_questions_list([m.value for m in ProjectOptions if m != ProjectOptions.OPEN_PROJECT or bool(project_locator.list_project_ids())]))
     print(f"project ids {project_locator.list_project_ids()}")
     # Project selection
@@ -245,8 +257,15 @@ def main():
 
     print(f"Map {map_root.data.name} opened.")
 
-    if not map_root.has_asset():
-        answer: dict = prompt(get_map_asset_questions_list())
+    while not map_root.has_asset():
+        answer: dict = prompt(get_map_asset_questions_list(project.resource_location))
+        if answer[PromptOptions.USER_OPTION] == "Select asset":
+            answer_select_asset: dict = prompt(get_asset_selection_questions_list(map_root))
+            map_root.add_asset_from_template(answer_select_asset[PromptOptions.USER_OPTION])
+        elif answer[PromptOptions.USER_OPTION] == "Check asset" and not map_root.has_asset():
+            print("No asset found.")
+
+    print("Map has asset.")
 
 if __name__ == "__main__":
     main()
