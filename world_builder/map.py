@@ -31,21 +31,6 @@ def generate_map_chat_context(map: TiledMap):
             print(gid)
             print(map.get_tile_properties_by_gid(gid))
 
-
-def copy_map_files_to_path(path_to_tmx_file: Path|str, target_path: Path|str, copy_assets_from_path: Optional[Path|str] = None, ):
-    path_to_tmx_file = Path(path_to_tmx_file)
-    target_path = Path(target_path)
-    if path_to_assets is not None:
-        path_to_assets = Path(path_to_assets)
-    map = TiledMap(filename=path_to_tmx_file)
-
-    for tileset in map.tilesets:
-        #assert isinstance(tileset, TiledTileset)
-        #if path_to_assets is not None:
-        #    tileset.source = path_to_assets / tileset.source
-        #tileset.save(target_path / tileset.source)
-        pass
-
 # Write file.
 
 def main():

@@ -214,9 +214,8 @@ def get_new_map_width_and_height_questions_list(draw_diameter: int) -> list[dict
         },
     ]
 
-def main():
-    project_locator = WorldBuilderProjectDirectory()
 
+def select_project(project_locator: WorldBuilderProjectDirectory) -> WorldBuilderProjectDirectory:
     # Project selection
     answer: dict = prompt(get_open_project_questions_list([m.value for m in ProjectOptions if m != ProjectOptions.OPEN_PROJECT or bool(project_locator.list_project_ids())]))
     print(f"project ids {project_locator.list_project_ids()}")
@@ -239,7 +238,10 @@ def main():
         raise ValueError(f"Invalid mode option: {answer[PromptOptions.USER_OPTION]}")
 
     print(f"Project {project.project_node.id} opened.")
+    return project
 
+
+def select_map_root(project: WorldBuilderProject) -> MapTileGroup:
     # Map root selection
     map_root_dict: dict[str, MapTileGroup] = project.get_map_root_dict()
     answer: dict = prompt(get_map_root_questions_list([m.value for m in MapRootOptions if m != MapRootOptions.OPEN_MAP_ROOT or bool(map_root_dict)]))
@@ -265,7 +267,24 @@ def main():
         elif answer[PromptOptions.USER_OPTION] == "Check asset" and not map_root.has_asset():
             print("No asset found.")
 
-    print("Map has asset.")
+    return map_root
+
+
+def main():
+    project_locator = WorldBuilderProjectDirectory()
+
+    project: WorldBuilderProject = select_project(project_locator)
+    map_root: MapTileGroup = select_map_root(project)
+
+    if map_root.has_asset():
+        print("Map has asset.")
+
+    import code
+    import readline
+    import rlcompleter
+    print("here")
+    readline.parse_and_bind("tab: complete")
+    code.interact(local=locals())
 
 if __name__ == "__main__":
     main()

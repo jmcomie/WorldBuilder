@@ -62,7 +62,7 @@ class DescriptionMatrixData(MapRectMetadata):
     tiles: list[list[str]] = Field(default=None, description="The sub-map cell description.")
 
 
-DrawDimensionInt = Literal[3, 4, 5, 6, 7, 8]
+DrawDimensionInt = Literal[3, 4, 5, 6, 7, 8, 9, 10]
 
 
 class MapRoot(BaseModel):

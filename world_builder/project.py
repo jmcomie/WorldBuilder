@@ -3,21 +3,22 @@ from lib2to3.pytree import BasePattern
 import os
 from pathlib import Path
 import sys
-from typing import Iterator, Optional, Type
+from typing import Any, Iterator, Optional, Type
 
 from pydantic import BaseModel
 import shutil
-
+from pytmx import TiledMap
 import world_builder
 from gstk.graph.interface.resource_locator.local_file import LocalFileLocator
 from gstk.graph.registry_context_manager import graph_registries
-from gstk.creation.api import CreationProject
+from gstk.creation.api import CreationProject, get_creation_project
 from gstk.graph.registry import EdgeRegistry, NodeRegistry
-from world_builder.graph_registry import MapRoot, WorldBuilderNodeRegistry, WorldBuilderEdgeRegistry, WorldBuilderNodeType
 from gstk.creation.group import new_group, GroupProperties, CreationGroup
 from gstk.graph.interface.graph.graph import Node
 from gstk.graph.system_graph_registry import SystemEdgeType
 
+from world_builder.graph_registry import MapRoot, WorldBuilderNodeRegistry, WorldBuilderEdgeRegistry, WorldBuilderNodeType
+from world_builder.map_data_interface import get_gid_tile_properties
 
 def world_builder_registry(fn):
     """
@@ -76,7 +77,6 @@ class WorldBuilderProjectDirectory(LocalFileLocator):
             (base_path / self.projects_directory_name).mkdir(exist_ok=True)
         return base_path
 
-
     def list_project_ids(self) -> list[str]:
         # Iterate all directories in cwd and check for the expected contents.
         return [d for d in os.listdir(Path(self.base_path) / self.projects_directory_name) if all([os.path.exists(
@@ -127,8 +127,21 @@ class MapTileGroup(CreationGroup):
         if update_existing:
             raise ValueError("Update existing is not supported yet.")
 
+    def get_image_buffer_from_tile_matrix(self, tile_matrix: list[list[int]]) -> Any:
+        tiled_map: TiledMap = self.get_tiled_map()
+        gid_tile_properties: dict[int, dict[str, Any]] = get_gid_tile_properties(tiled_map)
+        tiled_map.get_tile_image_by_gid(3)
+
+    def _path_to_map(self) -> Path:
+        return self._resource_location / MAP_METADATA_DIRNAME / str(self.node.id) / MAP_FILENAME
+
     def has_asset(self) -> bool:
-        return (self._resource_location / MAP_METADATA_DIRNAME / str(self.node.id) / MAP_FILENAME).exists()
+        return self._path_to_map().exists()
+
+    def get_tiled_map(self) -> TiledMap:
+        if not self.has_asset():
+            raise ValueError("Map does not exist.")
+        return TiledMap(filename=str(self._path_to_map()))
 
     def list_asset_templates(self) -> list[str]:
         print(Path(world_builder.__file__).parent / MAP_METADATA_TEMPLATES_DIRNAME)
@@ -165,3 +178,10 @@ class WorldBuilderProject(CreationProject):
         # create asset group and an entry for every asset type
         # how do we list assets
         return MapTileGroup(self.resource_location, node)
+
+
+def get_project(project_id: str) -> MapTileGroup:
+    project_locator: WorldBuilderProjectDirectory = WorldBuilderProjectDirectory()
+    project: WorldBuilderProject = get_creation_project(project_id, resource_locator=project_locator, project_class=WorldBuilderProject)
+    return project
+
