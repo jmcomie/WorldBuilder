@@ -1,16 +1,28 @@
+import asyncio
 from enum import StrEnum
 from pathlib import Path
 import sys
 from typing import Callable, get_args
+import code
+import readline
+import rlcompleter
 
 from gstk.creation.api import CreationProject, get_creation_project, ProjectProperties, new_creation_project
 
 # START Monkey patch.
 import collections
 import collections.abc
-from world_builder.graph_registry import DrawDimensionInt, MapRoot
+
+from gstk.graph.interface.graph.graph import Node
 collections.Mapping = collections.abc.Mapping
 # END Monkey patch.
+
+from gstk.creation.graph_registry import Message, Role
+
+from gstk.creation.group import get_chat_completion_object_response
+from gstk.graph.registry import NodeTypeData
+from gstk.graph.registry_context_manager import _current_registry, current_node_registry, default_registries, graph_registries
+from world_builder.graph_registry import DrawDimensionInt, MapRoot, WorldBuilderNodeType, WorldBuilderEdgeRegistry, WorldBuilderNodeRegistry
 
 
 from world_builder.project import MAP_METADATA_DIRNAME, MapTileGroup, WorldBuilderProject, WorldBuilderProjectDirectory
@@ -269,22 +281,57 @@ def select_map_root(project: WorldBuilderProject) -> MapTileGroup:
 
     return map_root
 
+prompt_str: str = """You are creating a 2D tilemap for a 2D game represented as integers in a CSV.
+Create an eight by eight int matrix in which each cell is one of the gid integers below, and that adheres to the following description: Create a map of the beach on the eastern side of some geography where the shore is aligned vertically near the center of the map and in which grass is on the left side of the map and in which water is on the right side of the map, with an appropriate gradation.
+GID Descriptions:
 
-def main():
+gid: 1 description: light green grass
+gid: 2 description: light green grass accented with leaves arranged from lower left to upper right
+gid: 3 description: light green grass accented with leaves arranged from upper left to lower right
+gid: 4 description: green grass
+gid: 5 description: green grass accented with leaves arranged from lower left to upper right
+gid: 6 description: green grass accented with leaves arranged from upper left to lower right
+gid: 7 description: sand
+gid: 8 description: ankle deep water
+gid: 9 description: knee deep water
+gid: 10 description: shoulder deep water
+gid: 11 description: water too deep to stand in
+"""
+
+
+async def run():
     project_locator = WorldBuilderProjectDirectory()
 
+    # If select_project and select_map_root are async, await them. Otherwise, make sure they are synchronous calls.
     project: WorldBuilderProject = select_project(project_locator)
     map_root: MapTileGroup = select_map_root(project)
 
-    if map_root.has_asset():
-        print("Map has asset.")
+    assert map_root.has_asset()
 
-    import code
-    import readline
-    import rlcompleter
-    print("here")
+    node_type_data: NodeTypeData = WorldBuilderNodeRegistry.get_node_type_data(WorldBuilderNodeType.MAP_MATRIX)
+    messages: list[Message] = []
+    if node_type_data.system_directive:
+        messages.append(Message(role=Role.system, content=node_type_data.system_directive))
+    # Assuming prompt_str is defined somewhere above this snippet
+    messages.append(Message(role=Role.user, content=prompt_str))
+    # Ensure get_chat_completion_object_response is an async function and awaited
+    response, vector = await get_chat_completion_object_response(WorldBuilderNodeType.MAP_MATRIX, messages)
+    node: Node = map_root.add_new_node(WorldBuilderNodeType.MAP_MATRIX, response)
+    node_updated: Node = await map_root.update(node, "Check the created output for any issues and retry, ensuring the best adherence to the original prompt.")
+    node_updated_twice: Node = await map_root.update(node_updated, "Check the created output for any issues and retry, ensuring the best adherence to the original prompt.")
+    print(f"Node updated twice: {node_updated_twice}")
+    print(node_updated_twice.data)
+    # readline.parse_and_bind and code.interact are blocking calls and should be outside of the async function or handled differently if you need to use them asynchronously.
     readline.parse_and_bind("tab: complete")
     code.interact(local=locals())
+
+async def start():
+    # Assuming default_registries is synchronous; if it's async, await it
+    default_registries(WorldBuilderNodeRegistry, WorldBuilderEdgeRegistry)
+    await run()
+
+def main():
+    asyncio.run(start())
 
 if __name__ == "__main__":
     main()

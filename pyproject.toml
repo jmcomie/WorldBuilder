@@ -13,6 +13,7 @@ pygame-ce = "^2.4.0"
 gstk = {path = "../../GenerativeStoryToolkit", develop = true}
 pyinquirer = "^1.0.3"
 pytmx = "^3.32"
+langchain-experimental = "^0.0.50"
 
 
 [build-system]
