@@ -12,10 +12,10 @@ from gstk.creation.api import CreationProject, get_creation_project, ProjectProp
 # START Monkey patch.
 import collections
 import collections.abc
-
-from gstk.graph.interface.graph.graph import Node
 collections.Mapping = collections.abc.Mapping
 # END Monkey patch.
+
+from gstk.graph.interface.graph.graph import Node
 
 from gstk.creation.graph_registry import Message, Role
 
@@ -324,6 +324,14 @@ async def run():
     # readline.parse_and_bind and code.interact are blocking calls and should be outside of the async function or handled differently if you need to use them asynchronously.
     readline.parse_and_bind("tab: complete")
     code.interact(local=locals())
+
+"""
+Open
+List
+List with data
+Display
+Up
+"""
 
 async def start():
     # Assuming default_registries is synchronous; if it's async, await it

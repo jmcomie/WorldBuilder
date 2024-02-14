@@ -38,6 +38,7 @@ def get_gid_data(tiled_map: TiledMap) -> dict[int, GIDData]:
             })
     return gid_data
 
+
 def get_tile_matrix_from_csv(csv_string: str|Path) -> list[list[int]]:
     df: pd.DataFrame = pd.read_csv(csv_string, header=None)
     df = df.astype(int)

@@ -101,7 +101,6 @@ class WorldBuilderProjectDirectory(LocalFileLocator):
         return self.base_path / self.projects_directory_name / project_id
 
 
-
 class MapTileGroup(CreationGroup):
     def __init__(self,  _resource_location: Path, *args, **kwargs):
         super().__init__(*args, **kwargs)
