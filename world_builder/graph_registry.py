@@ -4,71 +4,28 @@ import gstk.creation.api
 import gstk.shim
 from pydantic import BaseModel, Field, field_validator, root_validator
 
-from gstk.user_registries.story.graph_registry import StoryNodeRegistry, StoryEdgeRegistry
-from gstk.graph.registry import EdgeRegistry, NodeRegistry
+from gstk.graph.registry import GraphRegistry
 from gstk.creation.graph_registry import CreationNode
-from gstk.graph.system_graph_registry import SystemEdgeType, SystemNodeType
+from gstk.graph.registry import SystemEdgeType, SystemNodeType
 from gstk.creation.graph_registry import Message, Role
 
 
-WorldBuilderNodeRegistry: NodeRegistry = StoryNodeRegistry.clone()
-WorldBuilderEdgeRegistry: EdgeRegistry = StoryEdgeRegistry.clone()
 
 class WorldBuilderNodeType(StrEnum):
-    MAP_ROOT = "world_builder.map"
+    MAP_ROOT = "world_builder.map_root"
     MAP_MATRIX = "world_builder.map_matrix"
     DESCRIPTION_MATRIX = "world_builder.description_matrix"
-    ALL = "world_builder.*"
-
-#system_message: Message = Message(
-#    role=Role.system,
-#    content="""
-#You are tasked with creating a 16x16 map for use in a videogame by representing
-#one or more of the nodes for the videogame ground layer.  The ground layer contains:
-#trees, grass, roads, foilage, water of various, sand.  The map should adhere to the description and you will
-#get updates on making it more arty.
-#""")
-    
-class MapRect(BaseModel):
-    x: int
-    y: int
-    width: int
-    height: int
-    
-class MapRectMetadata(BaseModel):
-    map_rect: Optional[MapRect] = None
-
-    class Config:
-        @classmethod
-        def json_schema_extra(cls, schema, model):
-            # This removes 'hidden_field' from the schema
-            schema['properties'].pop('map_rect', None)
-
-        extra = "forbid"
-        use_enum_values = True
+    WORLD_BUILDER_ALL = "world_builder.*"
 
 
-class MapMatrixData(MapRectMetadata):
-    """Data describing the name and tiles of a map in a videogame."""
-    width: int = Field(default=None, description="The width of the map.")
-    height: int = Field(default=None, description="The height of the map.")
-    tiles: list[list[int]] = Field(default=None, description="The tiles on the map.")
+DrawDiameterInt = Literal[3, 4, 5, 6, 7, 8, 9, 10]
 
 
-class DescriptionMatrixData(MapRectMetadata):
-    """Data describing a description of a map in a videogame."""
-    width: int = Field(default=None, description="The width of the map.")
-    height: int = Field(default=None, description="The height of the map.")
-    tiles: list[list[str]] = Field(default=None, description="The sub-map cell description.")
-
-
-DrawDimensionInt = Literal[3, 4, 5, 6, 7, 8, 9, 10]
-
-
-class MapRoot(BaseModel):
+@GraphRegistry.node_type(WorldBuilderNodeType.MAP_ROOT, child_types=[WorldBuilderNodeType.DESCRIPTION_MATRIX, WorldBuilderNodeType.MAP_MATRIX])
+class MapRootData(BaseModel):
     name: str
     layer_names: Optional[list[str]] = None
-    draw_diameter: DrawDimensionInt
+    draw_diameter: DrawDiameterInt
     width: int
     height: int
  
@@ -78,7 +35,7 @@ class MapRoot(BaseModel):
 
     @root_validator(pre=True)
     @classmethod
-    def validate_all_fields_at_the_same_time(cls, field_values):
+    def validate_all_fields(cls, field_values):
         if field_values["width"] % field_values["draw_diameter"] != 0:
             raise ValueError(f"Width {field_values['width']} must be a multiple of draw_diameter {field_values['draw_diameter']}.")
         if field_values["height"] % field_values["draw_diameter"] != 0:
@@ -86,37 +43,44 @@ class MapRoot(BaseModel):
         return field_values
 
 
-class MapLayerRoot(BaseModel):
-    layer_name: str
+GraphRegistry.register_connection_type(SystemNodeType.PROJECT, WorldBuilderNodeType.MAP_ROOT, SystemEdgeType.contains)
 
 
-WorldBuilderNodeRegistry.register_node(
-    WorldBuilderNodeType.MAP_MATRIX,
-    model=MapMatrixData,
-    system_message="""You are tasked with creating a map for use in a videogame by representing
+class MapRect(BaseModel):
+    x: int
+    y: int
+    width: int
+    height: int
+
+
+class MapRectMetadata(BaseModel):
+    _map_rect: Optional[MapRect] = None
+
+    class Config:
+        extra = "forbid"
+        use_enum_values = True
+
+
+@GraphRegistry.node_type(WorldBuilderNodeType.MAP_MATRIX)
+class MapMatrixData(MapRectMetadata):
+    """Data describing the name and tiles of a map in a videogame."""
+    _system_message: str = """You are tasked with creating a map for use in a videogame by representing
 one or more of the nodes for the videogame ground layer.  The ground layer contains:
 trees, grass, roads, foilage, water of various, sand.  The map should adhere to the description and you will
 get updates on making it more arty."""
-)
+    width: int = Field(default=None, description="The width of the map.")
+    height: int = Field(default=None, description="The height of the map.")
+    tiles: list[list[int]] = Field(default=None, description="The tiles on the map.")
 
 
-WorldBuilderNodeRegistry.register_node(
-    WorldBuilderNodeType.DESCRIPTION_MATRIX,
-    model=DescriptionMatrixData,
-)
-
-WorldBuilderNodeRegistry.register_node(
-    WorldBuilderNodeType.MAP_ROOT,
-    model=MapRoot,
-)
+@GraphRegistry.node_type(WorldBuilderNodeType.DESCRIPTION_MATRIX, child_types=[WorldBuilderNodeType.DESCRIPTION_MATRIX, WorldBuilderNodeType.MAP_MATRIX])
+class DescriptionMatrixData(MapRectMetadata):
+    """Data describing a description of a map in a videogame."""
+    _system_message: str = "Data describing a description of a map in a videogame."
+    width: int = Field(default=None, description="The width of the map.")
+    height: int = Field(default=None, description="The height of the map.")
+    tiles: list[list[str]] = Field(default=None, description="The sub-map cell description.")
 
 
-WorldBuilderEdgeRegistry.register_connection_types(CreationNode.group, WorldBuilderNodeType.MAP_ROOT, [SystemEdgeType.contains, SystemEdgeType.references])
-#WorldBuilderEdgeRegistry.register_connection_types(SystemNodeType.project, WorldBuilderNodeType.MAP_ROOT, [SystemEdgeType.contains, SystemEdgeType.references])
-WorldBuilderEdgeRegistry.register_connection_types(WorldBuilderNodeType.MAP_ROOT, WorldBuilderNodeType.MAP_MATRIX, [SystemEdgeType.contains, SystemEdgeType.references])
-WorldBuilderEdgeRegistry.register_connection_types(WorldBuilderNodeType.MAP_ROOT, WorldBuilderNodeType.DESCRIPTION_MATRIX, [SystemEdgeType.contains, SystemEdgeType.references])
-WorldBuilderEdgeRegistry.register_connection_types(WorldBuilderNodeType.MAP_MATRIX, WorldBuilderNodeType.DESCRIPTION_MATRIX, [SystemEdgeType.contains, SystemEdgeType.references])
 
-class WorldBuilderCreator:
-    def __init__(self, project_id: str):
-        pass
+

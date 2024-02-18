@@ -7,7 +7,6 @@ import code
 import readline
 import rlcompleter
 
-from gstk.creation.api import CreationProject, get_creation_project, ProjectProperties, new_creation_project
 
 # START Monkey patch.
 import collections
@@ -15,13 +14,13 @@ import collections.abc
 collections.Mapping = collections.abc.Mapping
 # END Monkey patch.
 
-from gstk.graph.interface.graph.graph import Node
+from gstk.graph.graph import Node, get_project, new_project
 
-from gstk.creation.graph_registry import Message, Role
+#from gstk.creation.graph_registry import Message, Role
 
-from gstk.creation.group import get_chat_completion_object_response
-from gstk.graph.registry import NodeTypeData
-from gstk.graph.registry_context_manager import _current_registry, current_node_registry, default_registries, graph_registries
+#from gstk.creation.group import get_chat_completion_object_response
+
+from gstk.graph.registry import NodeTypeData, ProjectProperties
 from world_builder.graph_registry import DrawDimensionInt, MapRoot, WorldBuilderNodeType, WorldBuilderEdgeRegistry, WorldBuilderNodeRegistry
 
 
@@ -227,7 +226,7 @@ def get_new_map_width_and_height_questions_list(draw_diameter: int) -> list[dict
     ]
 
 
-def select_project(project_locator: WorldBuilderProjectDirectory) -> WorldBuilderProjectDirectory:
+def select_project(project_locator: WorldBuilderProjectDirectory) -> WorldBuilderProject:
     # Project selection
     answer: dict = prompt(get_open_project_questions_list([m.value for m in ProjectOptions if m != ProjectOptions.OPEN_PROJECT or bool(project_locator.list_project_ids())]))
     print(f"project ids {project_locator.list_project_ids()}")
@@ -240,12 +239,12 @@ def select_project(project_locator: WorldBuilderProjectDirectory) -> WorldBuilde
             name=answer_new['project_name'],
             description=answer_new['project_description']
         )
-        project = new_creation_project(project_properties.id, project_properties, resource_locator=project_locator, project_class=WorldBuilderProject)
+        project = new_project(project_properties, project_locator)
         (project.resource_location / MAP_METADATA_DIRNAME).mkdir(parents=True, exist_ok=True)
     elif answer[PromptOptions.USER_OPTION] == ProjectOptions.OPEN_PROJECT:
         answer_open: dict = prompt(get_open_project_questions_list(project_locator.list_project_ids()))
         project_id: str = answer_open[PromptOptions.USER_OPTION]
-        project = get_creation_project(project_id, resource_locator=project_locator, project_class=WorldBuilderProject)
+        project: Node = get_project(project_id, resource_locator=project_locator, project_class=WorldBuilderProject)
     else:
         raise ValueError(f"Invalid mode option: {answer[PromptOptions.USER_OPTION]}")
 
