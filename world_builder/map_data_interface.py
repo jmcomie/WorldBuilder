@@ -89,3 +89,11 @@ def get_image_from_tile_matrix(tile_matrix: list[list[int]], tiled_map: TiledMap
 def image_from_csv_tile_matrix(csv_string: str|Path, tiled_map: TiledMap) -> Image:
     tile_matrix: list[list[int]] = get_tile_matrix_from_csv(csv_string)
     return get_image_from_tile_matrix(tile_matrix, tiled_map)
+
+
+def generate_map_chat_context(map: TiledMap):
+    for tileset in map.tilesets:
+        assert isinstance(tileset, TiledTileset)
+        for gid in range(tileset.firstgid, tileset.firstgid+tileset.tilecount):
+            print(gid)
+            print(map.get_tile_properties_by_gid(gid))

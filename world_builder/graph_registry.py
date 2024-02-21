@@ -28,7 +28,8 @@ class MapRootData(BaseModel):
     draw_diameter: DrawDiameterInt
     width: int
     height: int
- 
+    description: Optional[str] = None
+
     class Config:
         extra = "forbid"
         use_enum_values = True
@@ -68,8 +69,6 @@ class MapMatrixData(MapRectMetadata):
 one or more of the nodes for the videogame ground layer.  The ground layer contains:
 trees, grass, roads, foilage, water of various, sand.  The map should adhere to the description and you will
 get updates on making it more arty."""
-    width: int = Field(default=None, description="The width of the map.")
-    height: int = Field(default=None, description="The height of the map.")
     tiles: list[list[int]] = Field(default=None, description="The tiles on the map.")
 
 
@@ -77,8 +76,6 @@ get updates on making it more arty."""
 class DescriptionMatrixData(MapRectMetadata):
     """Data describing a description of a map in a videogame."""
     _system_message: str = "Data describing a description of a map in a videogame."
-    width: int = Field(default=None, description="The width of the map.")
-    height: int = Field(default=None, description="The height of the map.")
     tiles: list[list[str]] = Field(default=None, description="The sub-map cell description.")
 
 
