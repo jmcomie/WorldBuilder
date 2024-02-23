@@ -89,17 +89,28 @@ class WorldBuilderProject:
         self._storage_node: Node = node
         self._resource_location: Path = resource_location
 
+    @property
+    def resource_location(self) -> Path:
+        return self._resource_location
+
     def list_map_roots(self) -> Iterator[MapRoot]:
-        for _edge, node in self.root_group.node.get_out_nodes(
-            edge_type_filter=[SystemEdgeType.contains],
-            node_type_filter=[WorldBuilderNodeType.MAP_ROOT]
-        ):
-            yield MapRoot(self._resource_location, node)
+        for node in self._storage_node.list_children():
+            if isinstance(node.data, MapRootData):
+                yield MapRoot(node, self._resource_location)
 
     def get_map_root_dict(self) -> dict[str, MapRoot]:
         return {map_root.data.name: map_root for map_root in self.list_map_roots()}
 
+    def get_map_root(self, name: str) -> MapRoot:
+        map_root: MapRoot = self.get_map_root_dict().get(name)
+        if map_root is None:
+            raise Exception(f"Map root with name {name} does not exist.")
+        return map_root
+
     def new_map(self, map_root_data: MapRootData) -> MapRoot:
+        print(f"type: {type(map_root_data)}")
+        if map_root_data.name in self.get_map_root_dict():
+            raise Exception(f"Map root with name {map_root_data.name} already exists.")
         map_root: MapRoot = MapRoot(self._storage_node.create_child(map_root_data), self._resource_location)
         self._storage_node.session.commit()
         return map_root

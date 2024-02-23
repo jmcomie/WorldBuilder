@@ -11,6 +11,9 @@ import rlcompleter
 # START Monkey patch.
 import collections
 import collections.abc
+from gstk.creation.group import get_chat_completion_object_response
+
+from gstk.models.chatgpt import Message, Role
 collections.Mapping = collections.abc.Mapping
 # END Monkey patch.
 
@@ -20,12 +23,12 @@ from gstk.graph.graph import Node, get_project, new_project
 
 #from gstk.creation.group import get_chat_completion_object_response
 
-from gstk.graph.registry import NodeTypeData, ProjectProperties
-from world_builder.graph_registry import DrawDimensionInt, MapRoot, WorldBuilderNodeType, WorldBuilderEdgeRegistry, WorldBuilderNodeRegistry
+from gstk.graph.registry import GraphRegistry, NodeTypeData, ProjectProperties
+from world_builder.graph_registry import DrawDiameterInt, MapRootData, WorldBuilderNodeType, MapRect
 
 
-from world_builder.project import MAP_METADATA_DIRNAME, MapTileGroup, WorldBuilderProject, WorldBuilderProjectDirectory
-
+from world_builder.project import MapRoot, WorldBuilderProject, WorldBuilderProjectDirectory
+from world_builder.map import MAP_METADATA_DIRNAME, MapRootData, MapRoot, SparseMapTree
 
 from PyInquirer import prompt
 from prompt_toolkit.validation import Validator, ValidationError
@@ -155,8 +158,8 @@ def get_open_map_questions_list(available_map_roots: list[str]) -> list[dict]:
     ]
 
 def validate_diameter(text: str):
-    if int(text) not in get_args(DrawDimensionInt):
-        raise ValidationError(message=f"Invalid dimensions. Dimensions must be one of {get_args(DrawDimensionInt)}.",
+    if int(text) not in get_args(DrawDiameterInt):
+        raise ValidationError(message=f"Invalid dimensions. Dimensions must be one of {get_args(DrawDiameterInt)}.",
                               cursor_position=len(text))
     return True
 
@@ -167,6 +170,12 @@ def get_new_map_name_and_diameter_questions_list(existing_map_names: list[str]) 
             'name': 'name',
             'message': 'Map name:',
             'validate': get_validate_new_map_root_id_fn(existing_map_names)
+        },
+        {
+            'type': 'input',
+            'name': 'description',
+            'message': 'Description:',
+            'validate': lambda text: len(text) > 20 and len(text) < 500
         },
         {
             'type': 'input',
@@ -197,13 +206,13 @@ def get_map_asset_questions_list(project_resource_location: Path) -> list[dict]:
         }
     ]
 
-def get_asset_selection_questions_list(map_tile_group: MapTileGroup) -> list[dict]:
+def get_asset_selection_questions_list(map_root: MapRoot) -> list[dict]:
     return [
         {
             'type': 'list',
             'name': 'user_option',
             'message': 'Select asset:',
-            'choices': map_tile_group.list_asset_templates()
+            'choices': map_root.list_asset_map_templates()
         }
     ]
 
@@ -228,10 +237,11 @@ def get_new_map_width_and_height_questions_list(draw_diameter: int) -> list[dict
 
 def select_project(project_locator: WorldBuilderProjectDirectory) -> WorldBuilderProject:
     # Project selection
+
     answer: dict = prompt(get_open_project_questions_list([m.value for m in ProjectOptions if m != ProjectOptions.OPEN_PROJECT or bool(project_locator.list_project_ids())]))
     print(f"project ids {project_locator.list_project_ids()}")
     # Project selection
-    project: WorldBuilderProject
+    project_node: Node
     if answer[PromptOptions.USER_OPTION] == ProjectOptions.NEW_PROJECT:
         answer_new: dict = prompt(get_new_project_questions_list(get_validate_new_project_id_fn(project_locator)))
         project_properties: ProjectProperties = ProjectProperties(
@@ -239,32 +249,37 @@ def select_project(project_locator: WorldBuilderProjectDirectory) -> WorldBuilde
             name=answer_new['project_name'],
             description=answer_new['project_description']
         )
-        project = new_project(project_properties, project_locator)
-        (project.resource_location / MAP_METADATA_DIRNAME).mkdir(parents=True, exist_ok=True)
+        project_node = new_project(project_properties, project_locator)
+        (project_locator.get_project_resource_location(project_properties.id) / MAP_METADATA_DIRNAME).mkdir(parents=True, exist_ok=True)
     elif answer[PromptOptions.USER_OPTION] == ProjectOptions.OPEN_PROJECT:
         answer_open: dict = prompt(get_open_project_questions_list(project_locator.list_project_ids()))
         project_id: str = answer_open[PromptOptions.USER_OPTION]
-        project: Node = get_project(project_id, resource_locator=project_locator, project_class=WorldBuilderProject)
+        project_node = get_project(project_id, project_locator)
     else:
         raise ValueError(f"Invalid mode option: {answer[PromptOptions.USER_OPTION]}")
 
-    print(f"Project {project.project_node.id} opened.")
-    return project
+    print(f"Project {project_node.data.id} opened.")
+    return WorldBuilderProject(project_node, project_locator.get_project_resource_location(project_node.data.id))
 
 
-def select_map_root(project: WorldBuilderProject) -> MapTileGroup:
+def select_map_root(project: WorldBuilderProject) -> MapRoot:
     # Map root selection
-    map_root_dict: dict[str, MapTileGroup] = project.get_map_root_dict()
+    map_root_dict: dict[str, MapRoot] = project.get_map_root_dict()
     answer: dict = prompt(get_map_root_questions_list([m.value for m in MapRootOptions if m != MapRootOptions.OPEN_MAP_ROOT or bool(map_root_dict)]))
-    map_root: MapTileGroup
+    map_root: MapRoot
     if answer[PromptOptions.USER_OPTION] == MapRootOptions.NEW_MAP_ROOT:
         answer_new = prompt(get_new_map_name_and_diameter_questions_list(map_root_dict.keys()))
         answer_new.update(prompt(get_new_map_width_and_height_questions_list(answer_new['draw_diameter'])))
-        map_root = project.new_map(MapRoot(**answer_new))
+        map_root = project.new_map(
+                MapRootData(name=answer_new['name'],
+                            draw_diameter=answer_new['draw_diameter'],
+                            description=answer_new["description"],
+                            width=answer_new['width'],
+                            height=answer_new['height']))
     elif answer[PromptOptions.USER_OPTION] == MapRootOptions.OPEN_MAP_ROOT:
         answer_open: dict = prompt(get_open_map_questions_list(map_root_dict.keys()))
         map_root_name: str = answer_open[PromptOptions.USER_OPTION]
-        map_root: MapTileGroup = map_root_dict[map_root_name]
+        map_root: MapRoot = map_root_dict[map_root_name]
     else:
         raise ValueError(f"Invalid map root option: {answer[PromptOptions.USER_OPTION]}")
 
@@ -274,7 +289,7 @@ def select_map_root(project: WorldBuilderProject) -> MapTileGroup:
         answer: dict = prompt(get_map_asset_questions_list(project.resource_location))
         if answer[PromptOptions.USER_OPTION] == "Select asset":
             answer_select_asset: dict = prompt(get_asset_selection_questions_list(map_root))
-            map_root.add_asset_from_template(answer_select_asset[PromptOptions.USER_OPTION])
+            map_root.add_asset_map_from_template(answer_select_asset[PromptOptions.USER_OPTION])
         elif answer[PromptOptions.USER_OPTION] == "Check asset" and not map_root.has_asset():
             print("No asset found.")
 
@@ -298,16 +313,8 @@ gid: 11 description: water too deep to stand in
 """
 
 
-async def run():
-    project_locator = WorldBuilderProjectDirectory()
-
-    # If select_project and select_map_root are async, await them. Otherwise, make sure they are synchronous calls.
-    project: WorldBuilderProject = select_project(project_locator)
-    map_root: MapTileGroup = select_map_root(project)
-
-    assert map_root.has_asset()
-
-    node_type_data: NodeTypeData = WorldBuilderNodeRegistry.get_node_type_data(WorldBuilderNodeType.MAP_MATRIX)
+async def xxx_map_creation_test(map_root: MapRoot):
+    node_type_data: NodeTypeData = GraphRegistry.get_node_type_data(WorldBuilderNodeType.MAP_MATRIX)
     messages: list[Message] = []
     if node_type_data.system_directive:
         messages.append(Message(role=Role.system, content=node_type_data.system_directive))
@@ -324,6 +331,32 @@ async def run():
     readline.parse_and_bind("tab: complete")
     code.interact(local=locals())
 
+
+async def run():
+    project_locator = WorldBuilderProjectDirectory()
+
+    # If select_project and select_map_root are async, await them. Otherwise, make sure they are synchronous calls.
+    project: WorldBuilderProject = select_project(project_locator)
+    map_root: MapRoot = select_map_root(project)
+
+    assert map_root.has_asset()
+
+
+async def run_in_code():
+    project_locator = WorldBuilderProjectDirectory()
+
+    # If select_project and select_map_root are async, await them. Otherwise, make sure they are synchronous calls.
+    project_id: str = "testproject"
+    project: WorldBuilderProject = WorldBuilderProject(get_project(project_id, project_locator), project_locator.get_project_resource_location(project_id))
+   
+    map_root: MapRoot = project.get_map_root("testing")
+    tree: SparseMapTree = map_root.tree
+    for node in tree.list_nodes_for_processing(commit_changes=True):
+        print(tree._map_hierarchy.get_rect_level(node.rect))
+        print(node.rect)
+    #print(len(list(tree.walk_tree())))
+
+
 """
 Open
 List
@@ -333,9 +366,8 @@ Up
 """
 
 async def start():
-    # Assuming default_registries is synchronous; if it's async, await it
-    default_registries(WorldBuilderNodeRegistry, WorldBuilderEdgeRegistry)
-    await run()
+    #await run()
+    await run_in_code()
 
 def main():
     asyncio.run(start())

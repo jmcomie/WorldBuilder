@@ -10,7 +10,6 @@ from gstk.graph.registry import SystemEdgeType, SystemNodeType
 from gstk.creation.graph_registry import Message, Role
 
 
-
 class WorldBuilderNodeType(StrEnum):
     MAP_ROOT = "world_builder.map_root"
     MAP_MATRIX = "world_builder.map_matrix"
@@ -21,30 +20,8 @@ class WorldBuilderNodeType(StrEnum):
 DrawDiameterInt = Literal[3, 4, 5, 6, 7, 8, 9, 10]
 
 
-@GraphRegistry.node_type(WorldBuilderNodeType.MAP_ROOT, child_types=[WorldBuilderNodeType.DESCRIPTION_MATRIX, WorldBuilderNodeType.MAP_MATRIX])
-class MapRootData(BaseModel):
-    name: str
-    layer_names: Optional[list[str]] = None
-    draw_diameter: DrawDiameterInt
-    width: int
-    height: int
-    description: Optional[str] = None
-
-    class Config:
-        extra = "forbid"
-        use_enum_values = True
-
-    @root_validator(pre=True)
-    @classmethod
-    def validate_all_fields(cls, field_values):
-        if field_values["width"] % field_values["draw_diameter"] != 0:
-            raise ValueError(f"Width {field_values['width']} must be a multiple of draw_diameter {field_values['draw_diameter']}.")
-        if field_values["height"] % field_values["draw_diameter"] != 0:
-            raise ValueError(f"Height {field_values['height']} must be a multiple of draw_diameter {field_values['draw_diameter']}.")
-        return field_values
-
-
-GraphRegistry.register_connection_type(SystemNodeType.PROJECT, WorldBuilderNodeType.MAP_ROOT, SystemEdgeType.contains)
+GraphRegistry.register_connection_type(SystemNodeType.PROJECT,
+                                       WorldBuilderNodeType.MAP_ROOT, SystemEdgeType.CONTAINS)
 
 
 class MapRect(BaseModel):
@@ -52,15 +29,34 @@ class MapRect(BaseModel):
     y: int
     width: int
     height: int
+    layer: Optional[str] = None
 
+    def to_tuple(self):
+        # Include type as string, layer, and rect.
+        return (self.x, self.y, self.width, self.height, self.layer, str(type(self)))
 
 class MapRectMetadata(BaseModel):
-    _map_rect: Optional[MapRect] = None
+    map_rect: Optional[MapRect] = None
 
     class Config:
+        @classmethod
+        def json_schema_extra(cls, schema, model):
+            # Omit map_rect from JSON schema representation since we define
+            # it in code, not via LLM.
+            schema['properties'].pop('map_rect', None)
+
         extra = "forbid"
         use_enum_values = True
 
+
+@GraphRegistry.node_type(WorldBuilderNodeType.MAP_ROOT, child_types=[WorldBuilderNodeType.DESCRIPTION_MATRIX, WorldBuilderNodeType.MAP_MATRIX])
+class MapRootData(BaseModel):
+    name: str
+    layer_names: Optional[list[str]] = None
+    width: int
+    height: int
+    draw_diameter: DrawDiameterInt
+    description: Optional[str] = None
 
 @GraphRegistry.node_type(WorldBuilderNodeType.MAP_MATRIX)
 class MapMatrixData(MapRectMetadata):
