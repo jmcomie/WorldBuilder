@@ -1,17 +1,18 @@
+from collections import deque
 from enum import Enum, StrEnum
 from itertools import product
 import math
 import os
 from pathlib import Path
 import shutil
-from typing import Any, Iterator, Optional, Union
+from typing import Any, Callable, Iterator, Optional, TypeVar, Union
 from gstk.graph.registry import GraphRegistry
 from pydantic import BaseModel
 from pytmx import TiledMap, TiledTileset
 
 import numpy as np
 from gstk.creation.graph_registry import Message
-from gstk.graph.graph import Node
+from gstk.graph.graph import Node, breadth_first_traversal
 import world_builder
 from world_builder.graph_registry import MapRect, MapRootData, WorldBuilderNodeType, MapRectMetadata, MapMatrixData, DescriptionMatrixData
 from world_builder.map_data_interface import get_gid_tile_properties
@@ -21,6 +22,27 @@ MAP_METADATA_DIRNAME: str = "map_metadata"
 MAP_METADATA_TEMPLATES_DIRNAME: str = "map_metadata_templates"
 MAP_FILENAME: str = "map.tmx"
 
+
+def extract_2d_array_subset(arr: np.ndarray, x_y_coords: tuple[int, int], diameter: int, fill_value: Any = None):
+    if diameter % 2 == 0:
+        raise ValueError(f"diameter must be odd number. got: {diameter}")
+    if isinstance(arr, list):
+        arr = np.array(arr)
+    x, y = x_y_coords
+    output = np.full((diameter, diameter), fill_value, dtype=object)
+
+    # Calculate start and end indices in the original array
+    radius = (diameter - 1) // 2
+    start_x, end_x = (x - radius, x + radius + 1)
+    start_y, end_y = (y - radius, y + radius + 1)
+
+    overlap_start_x, overlap_start_y = (max(0, -start_x), max(0, -start_y))
+    overlap_end_x, overlap_end_y = (diameter - max(0, end_x - arr.shape[0]), diameter - max(0, end_y - arr.shape[1]))
+
+    output[overlap_start_x:overlap_end_x, overlap_start_y:overlap_end_y] = arr[max(start_x, 0):min(end_x, arr.shape[0]), max(start_y, 0): min(end_y, arr.shape[1])]
+    return output
+
+# have list rects produce a matrix
 
 class MapHierarchy(object):
     def __init__(self, map_root_data: MapRootData):
@@ -63,23 +85,26 @@ class MapHierarchy(object):
         cur_width = self.global_column_count / (self.draw_diameter ** distance_from_leaf_level)
         cur_height = self.global_row_count / (self.draw_diameter ** distance_from_leaf_level)
         return cur_height / self.draw_diameter, cur_width / self.draw_diameter
-
+ 
     def get_rect_level(self, map_rect: MapRect) -> int:
         return int(math.log(max(self.global_column_count, self.global_row_count), self.draw_diameter)) - math.log(max(map_rect.width, map_rect.height), self.draw_diameter)
 
-    def get_rect_level_coordinates(self, map_rect: MapRect):
+    def get_rect_level_coordinates(self, map_rect: MapRect) -> tuple[int, int]:
         depth: int = self.get_rect_level(map_rect)
         leaf_count: tuple[int, int] = self.get_leaf_count_per_tile(depth)
-        return map_rect.y / leaf_count[0], map_rect.x / leaf_count[1]
+        return int(map_rect.y // leaf_count[0]), int(map_rect.x // leaf_count[1])
 
     def get_leaf_count_per_tile(self, depth: int) -> tuple[int, int]:
         row_count, column_count = self.get_shape_at_depth(depth)
         return self.global_row_count / row_count, self.global_column_count / column_count
 
-    def list_rects(self, depth: int) -> Iterator[MapRect]:
+    def list_rect_matrix(self, depth: int) -> list[list[MapRect]]:
+        level_shape = self.get_shape_at_depth(depth)
+        outer_list: list[list[MapRect]] = np.ndarray((int(level_shape[0]), int(level_shape[1]),), dtype=object).tolist()
         leaf_count: tuple[int, int] = self.get_leaf_count_per_tile(depth)
         for row, column in self.list_level_coordinates(depth):
-            yield MapRect(y=row*leaf_count[0], x=column*leaf_count[1], height=leaf_count[0], width=leaf_count[1])
+            outer_list[row][column] = MapRect(y=row*leaf_count[0], x=column*leaf_count[1], height=leaf_count[0], width=leaf_count[1])
+        return outer_list
 
     def check_rect(self, map_rect: MapRect):
         row_count, column_count = self.get_shape_at_depth(self.get_rect_level(map_rect))
@@ -111,12 +136,30 @@ class MapHierarchy(object):
         parent_level_leaf_count: tuple[int, int] = self.get_leaf_count_per_tile(depth - 1)
         return MapRect(x=map_rect.x - (map_rect.x % parent_level_leaf_count[1]), y=map_rect.y - (map_rect.y % parent_level_leaf_count[0]), width=parent_level_leaf_count[1], height=parent_level_leaf_count[0])
 
-    def walk_rects(self, map_rect: MapRect) -> Iterator[MapRect]:
-        yield map_rect
-        if self.get_tree_height() - 1 > self.get_rect_level(map_rect):
-            for child_rect in self.list_child_rects(map_rect):
-                yield from self.walk_rects(child_rect)
+    def walk_rects(self, map_rect: Optional[MapRect] = None) -> Iterator[MapRect]:
+        """
+        Breadth first tree iteration.
+        """
+        if map_rect is None:
+            root_level_rects: list[MapRect] = self.get_level_coordinates_rect((0, 0), 0)
+            assert len(root_level_rects) == 1
+            map_rect = root_level_rects[0]
+        def get_child_rects(parent_rect: MapRect) -> Iterator[MapRect]:
+            if self.get_tree_height() - 1 > self.get_rect_level(parent_rect):
+                yield from self.list_child_rects(parent_rect)
+        yield from breadth_first_traversal(map_rect, get_child_rects)
 
+    def get_level_coordinates_rect(self, coords: tuple[int, int], level: int) -> MapRect:
+        # XXX Verify this logic. (test that it's in the inverse of get_rect_level_coordinates)
+        leaf_count: tuple[int, int] = self.get_leaf_count_per_tile(level)
+        return MapRect(x=coords[1]*leaf_count[1], y=coords[0]*leaf_count[0], width=leaf_count[1], height=leaf_count[0])
+
+    def get_rect_neighbors(self, rect: MapRect, diameter: int) -> list[list[Optional[MapRect]]]:
+        """
+        Returns a 2d matrix of neighbors of shape (diameter, diameter). If a neighbor is off
+        the map, it is None. The given rect is in the center of the returned matrix.
+        """
+        return extract_2d_array_subset(np.array(self.list_rect_matrix(self.get_rect_level(rect))), self.get_rect_level_coordinates(rect), diameter)
 
 class SparseMapNode:
     def __init__(self, map_rect: MapRect, node: Optional[Node] = None):
@@ -154,22 +197,26 @@ class SparseMapTree:
         assert isinstance(self._map_root_node.data, MapRootData)
         self._rect_data_node_dict: Optional[dict[tuple, Node]] = None
 
-    def list_nodes_for_processing(self,
+    def list_data_for_processing(self,
                                   skip_non_empty: bool = False,
                                   parent_node: Optional[Node] = None,
-                                  commit_changes: bool = False) -> Iterator[Node]:
-        for node in self.walk_tree(root_node=parent_node):
-            if node.has_data() and skip_non_empty:
+                                  commit_changes: bool = False) -> Iterator[Union[MapMatrixData, DescriptionMatrixData]]:
+        self.ensure_rect_node_dict()
+        for sparse_node in self.walk_tree(root_node=parent_node):
+            if sparse_node.has_data() and skip_non_empty:
                 continue
-            if not node.has_data():
-                node.node = self.get_or_create_data_node(self._get_empty_model_instance(node.rect))
-            assert isinstance(node.node.data, (MapMatrixData, DescriptionMatrixData))
-            data_before: dict = node.node.data.model_dump()
-            yield node.node
-            if commit_changes and data_before != node.node.data.model_dump():
-                self.check_data(node.node.data)
-                node.save()
-                node._node.session.commit()
+            if not sparse_node.has_data():
+                print(sparse_node.rect)
+                sparse_node.node = self.get_or_create_data_node(self._get_empty_model_instance(sparse_node.rect))
+            assert isinstance(sparse_node.node.data, (MapMatrixData, DescriptionMatrixData))
+            data: Union[MapMatrixData, DescriptionMatrixData] = sparse_node.node.data
+            yield data
+            if commit_changes and data.model_dump() != sparse_node.node.data.model_dump():
+                self.check_data(sparse_node.node.data)
+                sparse_node.node.data = data
+                self._rect_data_node_dict[sparse_node.node.data.map_rect.to_tuple()] = sparse_node.node
+                sparse_node.node.save()
+                sparse_node.node.session.commit()
 
     @property
     def root_node(self) -> Node:
@@ -177,7 +224,7 @@ class SparseMapTree:
 
     def get_data_node(self, map_rect: MapRect) -> Optional[Node]:
         self.ensure_rect_node_dict()
-        return self._rect_data_node_dict.get(map_rect.to_tuple())
+        return SparseMapNode(map_rect, self._rect_data_node_dict.get(map_rect.to_tuple()))
 
     def check_data(self, data: Union[MapMatrixData, DescriptionMatrixData]):
         self._map_hierarchy.check_rect(data.map_rect)
@@ -189,10 +236,7 @@ class SparseMapTree:
             raise ValueError(f"DescriptionMatrixData {data} is at the leaf level.")
 
     def _get_empty_model_instance(self, map_rect: MapRect) -> Union[MapMatrixData, DescriptionMatrixData]:
-        level: int = self._map_hierarchy.get_rect_level(map_rect)
-        if level == 0:
-            raise ValueError("Cannot create an empty model instance for the root node.")
-        elif self._map_hierarchy.get_tree_height() -1 == level:
+        if self._map_hierarchy.get_tree_height() -1 == self._map_hierarchy.get_rect_level(map_rect):
             return MapMatrixData(map_rect=map_rect, tiles=np.zeros((map_rect.height, map_rect.width), dtype=np.int32).tolist())
         else:
             return DescriptionMatrixData(map_rect=map_rect, tiles=np.empty((map_rect.height, map_rect.width), dtype=str).tolist())
@@ -218,7 +262,9 @@ class SparseMapTree:
 
     def get_or_create_data_node(self, data: Union[MapMatrixData, DescriptionMatrixData]) -> Node:
         self.ensure_rect_node_dict()
+        print(data.map_rect.to_tuple())
         if data.map_rect.to_tuple() in self._rect_data_node_dict:
+            print("Data in CACHE")
             return self._rect_data_node_dict[data.map_rect.to_tuple()]
 
         self.check_data(data)
@@ -246,8 +292,12 @@ class SparseMapTree:
             yield SparseMapNode(rect, self.get_data_node(rect))
 
     def walk_tree(self, root_node: Optional[Node] = None) -> Iterator[SparseMapNode]:
+        """
+        Breadth first sparse iteration. Yields SparseMapNode for each entry in tree
+        including root. If data node in tree exists for sparse node it is available, 
+        """
         if root_node is None or root_node.id == self._map_root_node.id:
-            root_node_rect = list(self._map_hierarchy.list_rects(0))[0]
+            root_node_rect = self.get_level_coordinates_rect((0, 0), 0)
         else:
             assert isinstance(root_node.data, MapRectMetadata)
             root_node_rect = root_node.data.map_rect

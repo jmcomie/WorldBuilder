@@ -24,7 +24,7 @@ from gstk.graph.graph import Node, get_project, new_project
 #from gstk.creation.group import get_chat_completion_object_response
 
 from gstk.graph.registry import GraphRegistry, NodeTypeData, ProjectProperties
-from world_builder.graph_registry import DrawDiameterInt, MapRootData, WorldBuilderNodeType, MapRect
+from world_builder.graph_registry import DrawDiameterInt, MapRootData, WorldBuilderNodeType, MapRect, MapMatrixData
 
 
 from world_builder.project import MapRoot, WorldBuilderProject, WorldBuilderProjectDirectory
@@ -348,12 +348,18 @@ async def run_in_code():
     # If select_project and select_map_root are async, await them. Otherwise, make sure they are synchronous calls.
     project_id: str = "testproject"
     project: WorldBuilderProject = WorldBuilderProject(get_project(project_id, project_locator), project_locator.get_project_resource_location(project_id))
-   
+
     map_root: MapRoot = project.get_map_root("testing")
     tree: SparseMapTree = map_root.tree
-    for node in tree.list_nodes_for_processing(commit_changes=True):
-        print(tree._map_hierarchy.get_rect_level(node.rect))
-        print(node.rect)
+    for data in tree.list_data_for_processing(commit_changes=True, skip_non_empty=True):
+        print(tree._map_hierarchy.get_rect_level(data.map_rect))
+        if isinstance(data, MapMatrixData):
+            print("CHANGING")
+            print(f"BEFORE CHANGING {data.tiles}")
+            print(f"TYPE {type(data.tiles[0])}")
+            data.tiles[0] = [3,3,3]
+            print(f"AFTER CHANGING {data.tiles}")
+        print(data.map_rect)
     #print(len(list(tree.walk_tree())))
 
 
