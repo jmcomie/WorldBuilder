@@ -11,7 +11,7 @@ import rlcompleter
 # START Monkey patch.
 import collections
 import collections.abc
-from gstk.creation.group import get_chat_completion_object_response
+from gstk.llmlib.object_generation import get_chat_completion_object_response
 
 from gstk.models.chatgpt import Message, Role
 collections.Mapping = collections.abc.Mapping
@@ -372,8 +372,8 @@ Up
 """
 
 async def start():
-    #await run()
-    await run_in_code()
+    await run()
+    #await run_in_code()
 
 def main():
     asyncio.run(start())

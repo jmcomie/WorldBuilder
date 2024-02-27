@@ -21,7 +21,6 @@ from world_builder.map_data_interface import get_gid_tile_properties
 
 
 EXPECTED_CONTENTS: list[str] = [
-    "map_metadata",
     "graph.sqlite"
 ]
 
@@ -102,12 +101,9 @@ class WorldBuilderProject:
         return {map_root.data.name: map_root for map_root in self.list_map_roots()}
 
     def get_map_root(self, name: str) -> MapRoot:
-        map_root: MapRoot = self.get_map_root_dict().get(name)
-        if map_root is None:
-            raise Exception(f"Map root with name {name} does not exist.")
-        return map_root
+        return self.get_map_root_dict().get(name)
 
-    def new_map(self, map_root_data: MapRootData) -> MapRoot:
+    def new_map_root(self, map_root_data: MapRootData) -> MapRoot:
         print(f"type: {type(map_root_data)}")
         if map_root_data.name in self.get_map_root_dict():
             raise Exception(f"Map root with name {map_root_data.name} already exists.")
