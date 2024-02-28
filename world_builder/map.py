@@ -1,3 +1,6 @@
+"""
+This is beautiful code and it needs to be beautifully documented.
+"""
 from collections import deque
 from enum import Enum, StrEnum
 from itertools import product
@@ -171,6 +174,9 @@ class MapHierarchy(object):
         """
         return extract_2d_array_subset(np.array(self.get_rect_matrix(self.get_rect_level(map_rect))),
                                        self.get_rect_level_coordinates(map_rect), diameter)
+
+    def get_coord_neighbors(self, level: int, coordinates: tuple[int, int], diameter:int) -> np.ndarray[MapRect]:
+        return extract_2d_array_subset(self.get_rect_matrix(level), coordinates, diameter)
 
 class SparseMapNode:
     def __init__(self, map_rect: MapRect, node: Optional[Node] = None):
