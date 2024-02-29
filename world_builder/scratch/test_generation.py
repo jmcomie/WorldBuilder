@@ -58,14 +58,17 @@ def get_parent_data_context(tree: SparseMapTree, node: Node):
 def get_neighbor_data_context(tree: SparseMapTree, map_rect: MapRect, diameter: int = 3) -> Optional[np.ndarray[object]]:
     if tree._map_hierarchy.get_rect_level(map_rect) == 0:
         return None
-    def get_neighbor_description(_map_rect: MapRect):
+    def get_neighbor_description(_map_rect: Optional[MapRect]):
+        if _map_rect is None:
+            return
         parent_rect: MapRect = tree._map_hierarchy.get_parent_rect(_map_rect)
         coords_in_parent: tuple[int, int] = tree._map_hierarchy.get_coordinates_in_parent(_map_rect)
         node: Node = tree.get_data_node(parent_rect)
         if node:
-            return node.data.tiles[coords_in_parent[1], coords_in_parent[0]]
+            return np.array(node.data.tiles)[coords_in_parent[1], coords_in_parent[0]]
 
     map_rect_neighbors = tree._map_hierarchy.get_rect_neighbors(map_rect, diameter)
+    print(map_rect_neighbors)
     return np.vectorize(get_neighbor_description)(map_rect_neighbors)
 
 
@@ -109,13 +112,13 @@ You are describing the root layout.
         print(parent_data)
         messages.append(
             Message(
-                role=Role.USER,
+                role=Role.SYSTEM,
                 content=f"""\
 The recursive prompts are listed below, from the root to the immediate parent of the created area. The root prompt
 represents a description of the entire map.
 
 The root prompt:
-parent_data[0]
+{parent_data[0]}
 
 
 {("Successive child prompts, up to the immediate parent: " + os.linesep.join(parent_data[1:])) if len(parent_data) > 1 else ""}
@@ -137,7 +140,7 @@ async def run_prompt_through_tree(prompt: str, map_root: MapRoot):
         elif isinstance(data, DescriptionMatrixData):
             messages: list[Message] = get_description_matrix_context_messages(map_root, data)
             preamble: str = ""# "Draw a three by three matrix with a sentence or two description of each area that adheres to this directive and the system directives: "
-            messages.append(Message(role=Role.USER, content=f"{preamble} Draw an island that has some beach, covers about 80% of the map, is round but not a perfect circle, and has a small village in the center among trees, with beaches on the edges."))
+            messages.append(Message(role=Role.USER, content=f"Draw an island that has some beach, covers about 80% of the map, is round but not a perfect circle, and has a small village in the center among trees, with beaches on the edges."))
             #messages.append(Message(role=Role.USER, content=r"Draw a three by three matrix with a sentence or two description of each area that adheres to this directive and the system directive: Draw an island where the island is circular and extends out to 80% of the map. Note that the upper left element in the matrix corresponds to the upper left part of the map and so on for the rest. If the area described by the sentence is partial or subdivided, provide that information in the description."))
             res: list = await get_chat_completion_object_response(list(GraphRegistry.get_node_types(data.__class__))[0], messages)
             print(res)
