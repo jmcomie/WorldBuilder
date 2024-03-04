@@ -21,7 +21,7 @@ from world_builder.map_data_interface import get_gid_tile_properties
 
 
 EXPECTED_CONTENTS: list[str] = [
-    "graph.sqlite"
+    "graph.sqlite",
 ]
 
 
