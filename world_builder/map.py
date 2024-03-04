@@ -7,6 +7,7 @@ from itertools import product
 import math
 import os
 from pathlib import Path
+import re
 import shutil
 from typing import Any, Callable, Iterator, Optional, TypeVar, Union
 from gstk.graph.registry import GraphRegistry
@@ -24,6 +25,7 @@ from world_builder.map_data_interface import get_gid_tile_properties
 MAP_METADATA_DIRNAME: str = "map_metadata"
 MAP_METADATA_TEMPLATES_DIRNAME: str = "map_metadata_templates"
 MAP_FILENAME: str = "map.tmx"
+CELL_IDENTIFER_RE: re.Pattern = re.compile(r"(\d+):(\d+)")
 
 
 def extract_2d_array_subset(arr: np.ndarray, x_y_coords: tuple[int, int], diameter: int, fill_value: Any = None) -> np.ndarray:
@@ -162,6 +164,18 @@ class MapHierarchy(object):
                     yield rect
         yield from breadth_first_traversal(map_rect, get_child_rects)
 
+    def get_map_rect_cell_identifier(self, map_rect: MapRect) -> str:
+        # This can be done algebraically for performance/cleanliness, but what
+        # the canonical structures are is not clear as yet.
+        level: int = self.get_rect_level(map_rect)
+        return self.get_rect_matrix(level).flatten().index(map_rect)
+
+    def get_cell_identifier_map_rect(self, cell_identifier: str) -> MapRect:
+        if not CELL_IDENTIFER_RE.match(cell_identifier):
+            raise ValueError(f"Invalid cell identifier: {cell_identifier}")
+        layer, cell_index = CELL_IDENTIFER_RE.match(cell_identifier).groups()
+        return self.get_rect_matrix(int(layer)).flatten()[int(cell_index)]
+
     def get_level_coordinates_rect(self, coords: tuple[int, int], level: int) -> MapRect:
         # XXX Verify this logic. (test that it's in the inverse of get_rect_level_coordinates)
         leaf_count: tuple[int, int] = self.get_leaf_count_per_tile(level)
@@ -178,18 +192,20 @@ class MapHierarchy(object):
     def get_coord_neighbors(self, level: int, coordinates: tuple[int, int], diameter:int) -> np.ndarray[MapRect]:
         return extract_2d_array_subset(self.get_rect_matrix(level), coordinates, diameter)
 
+
 class SparseMapNode:
-    def __init__(self, map_rect: MapRect, node: Optional[Node] = None):
+    def __init__(self, map_rect: MapRect, data_node: Optional[Node] = None, cell_identifier: Optional[str] = None):
         self._map_rect: MapRect = map_rect
-        self._node: Optional[Node] = node
+        self._cell_identifier: str = cell_identifier
+        self._data_node: Optional[Node] = data_node
 
     @property
     def node(self) -> Optional[Node]:
-        return self._node
+        return self._data_node
 
     @node.setter
     def node(self, node: Node):
-        self._node = node
+        self._data_node = node
 
     @property
     def rect(self) -> MapRect:
@@ -199,10 +215,14 @@ class SparseMapNode:
     def data(self):
         if not self.has_data():
             raise ValueError("Node has no data.")
-        return self._node.data 
+        return self._data_node.data 
 
     def has_data(self) -> bool:
-        return self._node is not None
+        return self._data_node is not None
+
+    @property
+    def cell_identifier(self) -> str:
+        return self._cell_identifier
 
 
 class SparseMapTree:
@@ -305,7 +325,7 @@ class SparseMapTree:
     def list_children(self, parent_node: Node) -> Iterator[Node]:
         assert isinstance(self._map_root_node.data, MapRectMetadata)
         for rect in self._map_hierarchy.get_rect_child_matrix(parent_node.data.map_rect).flatten():
-            yield SparseMapNode(rect, self.get_data_node(rect))
+            yield SparseMapNode(rect, data_node=self.get_data_node(rect), cell_identifier=self._map_hierarchy.get_map_rect_cell_identifier(rect))
 
     def walk_tree(self, root_node: Optional[Node] = None) -> Iterator[SparseMapNode]:
         """
@@ -318,7 +338,7 @@ class SparseMapTree:
             assert isinstance(root_node.data, MapRectMetadata)
             root_node_rect = root_node.data.map_rect
         for rect in self._map_hierarchy.walk_rects(root_node_rect):
-            yield SparseMapNode(rect, self.get_data_node(rect))
+            yield SparseMapNode(rect, self.get_data_node(rect), self._map_hierarchy.get_map_rect_cell_identifier(rect))
  
     def ensure_rect_node_dict(self):
         if self._rect_data_node_dict is not None:
@@ -337,6 +357,10 @@ class SparseMapTree:
                 return None
             return self.get_data_node(rect)
         return np.vectorize(_get_node)(rect_neighbors)
+
+    def get_sparse_node_from_cell_identifier(self, cell_identifier: str) -> SparseMapNode:
+        map_rect: MapRect = self._map_hierarchy.get_cell_identifier_map_rect(cell_identifier)
+        return SparseMapNode(map_rect, data_node=self.get_data_node(map_rect), cell_identifier=cell_identifier)
 
 class MapRoot:
     """
