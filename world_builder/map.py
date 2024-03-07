@@ -26,7 +26,7 @@ MAP_METADATA_DIRNAME: str = "map_metadata"
 MAP_METADATA_TEMPLATES_DIRNAME: str = "map_metadata_templates"
 MAP_FILENAME: str = "map.tmx"
 CELL_IDENTIFER_RE: re.Pattern = re.compile(r"(\d+):(\d+)")
-
+ROOT_CELL_IDENTIFIER: str = "0:0"
 
 def extract_2d_array_subset(arr: np.ndarray, x_y_coords: tuple[int, int], diameter: int, fill_value: Any = None) -> np.ndarray:
     if diameter % 2 == 0:
@@ -92,7 +92,7 @@ class MapHierarchy(object):
         return cur_height / self.draw_diameter, cur_width / self.draw_diameter
  
     def get_rect_level(self, map_rect: MapRect) -> int:
-        return int(math.log(max(self.global_column_count, self.global_row_count), self.draw_diameter)) - math.log(max(map_rect.width, map_rect.height), self.draw_diameter)
+        return int(int(math.log(max(self.global_column_count, self.global_row_count), self.draw_diameter)) - math.log(max(map_rect.width, map_rect.height), self.draw_diameter))
 
     def get_rect_level_coordinates(self, map_rect: MapRect) -> tuple[int, int]:
         depth: int = self.get_rect_level(map_rect)
@@ -168,7 +168,7 @@ class MapHierarchy(object):
         # This can be done algebraically for performance/cleanliness, but what
         # the canonical structures are is not clear as yet.
         level: int = self.get_rect_level(map_rect)
-        return self.get_rect_matrix(level).flatten().index(map_rect)
+        return f"{level}:{np.where(self.get_rect_matrix(level).flatten() == map_rect)[0][0]}"
 
     def get_cell_identifier_map_rect(self, cell_identifier: str) -> MapRect:
         if not CELL_IDENTIFER_RE.match(cell_identifier):
@@ -293,28 +293,37 @@ class SparseMapTree:
         # Create in descending order.
         for rect in reversed(parent_chain):
             new_node: Node = parent_rect_node.create_child(self._get_empty_model_instance(rect))
+            new_node.save()
             self._rect_data_node_dict[rect.to_tuple()] = new_node
             parent_rect_node = new_node
         return parent_rect_node
 
-    def get_or_create_data_node(self, data: Union[MapMatrixData, DescriptionMatrixData]) -> Node:
-        self.ensure_rect_node_dict()
-        print(data.map_rect.to_tuple())
-        if data.map_rect.to_tuple() in self._rect_data_node_dict:
-            return self._rect_data_node_dict[data.map_rect.to_tuple()]
-
+    def get_or_create_data_node(self, data: Union[MapMatrixData, DescriptionMatrixData], force_create: bool = False) -> Node:
         self.check_data(data)
-        parent_node: Node = self._ensure_parents_exist(data.map_rect)
-        node: Node = parent_node.create_child(data)
-        parent_node.session.commit()
+
+        reload = False
+        if self._map_hierarchy.get_rect_level(data.map_rect) > 0:
+            parent_rect: MapRect = self._map_hierarchy.get_parent_rect(data.map_rect)
+            reload = not self.has_data_node(parent_rect)
+
+        self.ensure_rect_node_dict(reload=reload)
+        if self.has_data_node(data.map_rect):
+            node: Node = self._rect_data_node_dict[data.map_rect.to_tuple()]
+            node.data = data
+        else:
+            parent_node: Node = self._ensure_parents_exist(data.map_rect)
+            node: Node = parent_node.create_child(data)
+
+        node.save()
+        node.session.commit()
         self._rect_data_node_dict[data.map_rect.to_tuple()] = node
         return node
 
     def update_data_node(self, data: Union[MapMatrixData, DescriptionMatrixData]):
+        self.check_data(data)
         self.ensure_rect_node_dict()
         if data.map_rect.to_tuple() not in self._rect_data_node_dict:
             raise ValueError(f"Node {data.map_rect} does not exist.")
-        self.check_data(data)
         node: Node = self._rect_data_node_dict[data.map_rect.to_tuple()]
         node.data = data
         node.session.commit()
@@ -340,8 +349,8 @@ class SparseMapTree:
         for rect in self._map_hierarchy.walk_rects(root_node_rect):
             yield SparseMapNode(rect, self.get_data_node(rect), self._map_hierarchy.get_map_rect_cell_identifier(rect))
  
-    def ensure_rect_node_dict(self):
-        if self._rect_data_node_dict is not None:
+    def ensure_rect_node_dict(self, reload: bool = False):
+        if self._rect_data_node_dict is not None and not reload:
             return
         self._rect_data_node_dict = {}
         for node in self._map_root_node.walk_tree():
@@ -426,3 +435,37 @@ class MapRoot:
         asset_path: Path = Path(world_builder.__file__).parent / MAP_METADATA_TEMPLATES_DIRNAME / asset_name
         shutil.copytree(asset_path, self._resource_location / MAP_METADATA_DIRNAME / str(self._storage_node.id))
 
+
+def get_cell_prompt(map_root: MapRoot, cell_identifier: str) -> str:
+    tree: SparseMapTree = map_root.tree
+    if cell_identifier == ROOT_CELL_IDENTIFIER:
+        return map_root.data.description
+    else:
+        map_rect: MapRect = tree._map_hierarchy.get_cell_identifier_map_rect(cell_identifier)
+        parent_rect: MapRect = tree._map_hierarchy.get_parent_rect(map_rect)
+        coords_in_parent: tuple[int, int] = tree._map_hierarchy.get_coordinates_in_parent(map_rect)
+        node: Node = tree.get_data_node(parent_rect)
+        if node:
+            return np.array(node.data.tiles)[*coords_in_parent]
+        return ""
+
+def set_cell_prompt(map_root: MapRoot, cell_identifier: str, prompt: str) -> str:
+    tree: SparseMapTree = map_root.tree
+    if cell_identifier == ROOT_CELL_IDENTIFIER:
+        data: MapRootData = map_root._storage_node.data
+        data.description = prompt
+        map_root._storage_node.data = data
+        map_root._storage_node.save()
+        map_root._storage_node.session.commit()
+    else:
+        map_rect: MapRect = tree._map_hierarchy.get_cell_identifier_map_rect(cell_identifier)
+        parent_rect: MapRect = tree._map_hierarchy.get_parent_rect(map_rect)
+        coords_in_parent: tuple[int, int] = tree._map_hierarchy.get_coordinates_in_parent(map_rect)
+        node: Node = tree.get_data_node(parent_rect)
+        if node is None:
+            node = tree.get_or_create_data_node(tree._get_empty_model_instance(parent_rect))
+        data = node.data
+        data.tiles[coords_in_parent[1]][coords_in_parent[0]] = prompt
+        node.data = data
+        node.save()
+        node.session.commit()

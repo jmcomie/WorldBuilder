@@ -1,8 +1,11 @@
 import asyncio
+import devtools
 from enum import Enum, StrEnum
 from pathlib import Path
 import pprint
+import pydoc
 import sys
+import tempfile
 from typing import Callable, get_args
 import code
 import readline
@@ -11,13 +14,14 @@ import rlcompleter
 
 # START Monkey patch.
 import collections
-import collections.abc
-from gstk.llmlib.object_generation import get_chat_completion_object_response
 
-from gstk.models.chatgpt import Message, Role
+import numpy as np
 collections.Mapping = collections.abc.Mapping
 # END Monkey patch.
 
+import collections.abc
+from gstk.llmlib.object_generation import get_chat_completion_object_response
+from gstk.models.chatgpt import Message, Role
 from gstk.graph.graph import Node, get_project, new_project
 
 #from gstk.creation.graph_registry import Message, Role
@@ -25,11 +29,11 @@ from gstk.graph.graph import Node, get_project, new_project
 #from gstk.creation.group import get_chat_completion_object_response
 
 from gstk.graph.registry import GraphRegistry, NodeTypeData, ProjectProperties
-from world_builder.graph_registry import DrawDiameterInt, MapRootData, WorldBuilderNodeType, MapRect, MapMatrixData
-
-
+from world_builder.graph_registry import DrawDiameterInt, MapRootData, WorldBuilderNodeType, MapRect, MapMatrixData, DescriptionMatrixData
+from world_builder.table import Table
+from world_builder.context import get_description_matrix_context_messages
 from world_builder.project import MapRoot, WorldBuilderProject, WorldBuilderProjectDirectory
-from world_builder.map import MAP_METADATA_DIRNAME, MapRootData, MapRoot, SparseMapTree, CELL_IDENTIFER_RE
+from world_builder.map import MAP_METADATA_DIRNAME, MapRootData, MapRoot, SparseMapTree, CELL_IDENTIFER_RE, ROOT_CELL_IDENTIFIER, get_cell_prompt, set_cell_prompt
 
 from PyInquirer import prompt
 from prompt_toolkit.validation import Validator, ValidationError
@@ -39,7 +43,7 @@ from PyInquirer import print_function
 class ExitDirectiveException(Exception): pass
 class BackDirectiveException(Exception): pass
 BACK_DIRECTIVE_INVOCATION_STRING: str = "back"
-ROOT_CELL_IDENTIFIER: str = "0:0"
+
 
 class PromptOptions(StrEnum):
     USER_OPTION = "user_option"
@@ -75,6 +79,7 @@ class Views(Enum):
     CELL = 3
     MATRIX = 4
     CONTEXT_CHAIN = 5
+
 
 def get_validate_new_project_id_fn(project_locator: WorldBuilderProjectDirectory):
     def validate_new_project_id(text: str):
@@ -166,7 +171,7 @@ def get_map_root_questions_list(choices: list[str]) -> list[dict]:
             'type': 'list',
             'name': 'user_option',
             'message': 'Create or open a map:',
-            'choices': choices
+            'choices': choices + [BackNavigations.BACK]
         }
     ]
 
@@ -177,7 +182,7 @@ def get_open_map_questions_list(available_map_roots: list[str]) -> list[dict]:
             'type': 'list',
             'name': 'user_option',
             'message': 'Select a map to open:',
-            'choices': available_map_roots
+            'choices': available_map_roots + [BackNavigations.BACK]
         }
     ]
 
@@ -321,14 +326,16 @@ def select_map_root(project: WorldBuilderProject) -> MapRoot:
     if answer[PromptOptions.USER_OPTION] == MapRootOptions.NEW_MAP_ROOT:
         answer_new = prompt(get_new_map_name_and_diameter_questions_list(map_root_dict.keys()))
         answer_new.update(prompt(get_new_map_width_and_height_questions_list(answer_new['draw_diameter'])))
-        map_root = project.new_map(
+        map_root = project.new_map_root(
                 MapRootData(name=answer_new['name'],
                             draw_diameter=answer_new['draw_diameter'],
                             description=answer_new["description"],
                             width=answer_new['width'],
                             height=answer_new['height']))
     elif answer[PromptOptions.USER_OPTION] == MapRootOptions.OPEN_MAP_ROOT:
-        answer_open: dict = prompt(get_open_map_questions_list(map_root_dict.keys()))
+        answer_open: dict = prompt(get_open_map_questions_list(list(map_root_dict.keys())))
+        if answer_open[PromptOptions.USER_OPTION] == BackNavigations.BACK:
+            raise BackDirectiveException()
         map_root_name: str = answer_open[PromptOptions.USER_OPTION]
         map_root: MapRoot = map_root_dict[map_root_name]
     elif answer[PromptOptions.USER_OPTION] == BackNavigations.BACK:
@@ -350,16 +357,50 @@ def select_map_root(project: WorldBuilderProject) -> MapRoot:
 
 
 def view_prompt(map_root: MapRoot, cell_identifier: str):
-    print("Viewing prompt")
+    pydoc.pager(get_cell_prompt(map_root, cell_identifier))
+
+def edited_prompt(prompt_str: str):
+    questions = [
+    {
+        'type': 'editor',
+        'name': 'contents',
+        'message': 'Editor',
+        'default': prompt_str,
+        'eargs': {
+            'ext':'.txt',
+            'editor':'vim'
+            #'filename': filepath
+        }
+    }
+    ]
+    answer = prompt(questions)
+    return answer['contents']
+
 
 def edit_prompt(map_root: MapRoot, cell_identifier: str):
     print("Editing prompt")
+    #with tempfile.NamedTemporaryFile(suffix=".txt", mode="w") as temp_file:
+    #    temp_file.write(get_cell_prompt(map_root, cell_identifier))
+    #    temp_file.flush()
+    prompt: str = edited_prompt(get_cell_prompt(map_root, cell_identifier))
+    print(f"Prompt: {prompt}")
+    set_cell_prompt(map_root, cell_identifier, prompt)
 
-def generate_child_matrix(map_root: MapRoot, cell_identifier: str):
+async def generate_child_matrix(map_root: MapRoot, cell_identifier: str):
     print("Generating child matrix")
+    map_rect: MapRect = map_root.tree.get_sparse_node_from_cell_identifier(cell_identifier).rect
+    messages: list[Message] = get_description_matrix_context_messages(map_root, map_rect)
+    res: list = await get_chat_completion_object_response(list(GraphRegistry.get_node_types(DescriptionMatrixData))[0], messages)
+    data: DescriptionMatrixData = DescriptionMatrixData(map_rect=map_rect, tiles=res.tiles)
+    data.tiles = res.tiles
+    map_root.tree.get_or_create_data_node(data)
 
 def view_context_chain(map_root: MapRoot, cell_identifier: str):
-    print("Viewing context chain")
+    map_rect: MapRect = map_root.tree.get_sparse_node_from_cell_identifier(cell_identifier).rect
+    messages: list[Message] = get_description_matrix_context_messages(map_root, map_rect)
+    pydoc.pager("\n".join([str(m) for m in messages]))
+    #pydoc.pager(pprint.pformat(messages))
+    #pydoc.pager(pprint.pformat([instance.model_dump() for instance in get_description_matrix_context_messages(map_root, map_rect)]))
 
 def format_human_readable_cell_description(map_root: MapRoot, cell_identifier: str) -> str:
     cell_identifier_human_readable: str
@@ -374,7 +415,7 @@ def format_human_readable_cell_description(map_root: MapRoot, cell_identifier: s
     header += f"\nCell Identifier: {cell_identifier}"
     return header
 
-def interact_with_cell(map_root: MapRoot, cell_identifier: str) -> tuple[Views, str]:
+async def interact_with_cell(map_root: MapRoot, cell_identifier: str) -> tuple[Views, str]:
     header: str = format_human_readable_cell_description(map_root, cell_identifier)
     #print(header)
     print(f"\033[38;5;88m{header}\033[0m")
@@ -388,7 +429,7 @@ def interact_with_cell(map_root: MapRoot, cell_identifier: str) -> tuple[Views, 
     elif answer[PromptOptions.USER_OPTION] == CellOptions.VIEW_CHILD_MATRIX:
         view_matrix(map_root, cell_identifier)
     elif answer[PromptOptions.USER_OPTION] == CellOptions.GENERATE_CHILD_MATRIX:
-        generate_child_matrix(map_root, cell_identifier)
+        await generate_child_matrix(map_root, cell_identifier)
     elif answer[PromptOptions.USER_OPTION] == CellOptions.VIEW_CONTEXT_CHAIN:
         view_context_chain(map_root, cell_identifier)
     elif answer[PromptOptions.USER_OPTION] == CellOptions.GOTO_CELL:
@@ -399,14 +440,17 @@ def interact_with_cell(map_root: MapRoot, cell_identifier: str) -> tuple[Views, 
         raise ValueError(f"Invalid cell option: {answer[PromptOptions.USER_OPTION]}")
 
 def view_matrix(map_root: MapRoot, cell: str):
+    matrix_str: str
     sparse_node = map_root.tree.get_sparse_node_from_cell_identifier(cell)
-    if not sparse_node.has_data:
-        print("No data in cell.")
+    if not sparse_node.has_data():
+        matrix_str = "No data."
     else:
-        pprint.pprint(sparse_node.data)
+        matrix_str = str(Table(sparse_node.data.tiles, 20, True))
+    pydoc.pager(matrix_str)
 
 
 SUPPORTED_VIEW_CHAIN: list[Views] = [Views.LANDING, Views.PROJECT, Views.MAP, Views.CELL]
+
 
 class CLIController():
     def __init__(self, project_locator: WorldBuilderProjectDirectory):
@@ -420,7 +464,7 @@ class CLIController():
         should_exit: bool = False
         while not should_exit:
             try:
-                self._interact()
+                await self._interact()
             except BackDirectiveException:
                 if self._cell == ROOT_CELL_IDENTIFIER:
                     self.pop_view()
@@ -455,7 +499,7 @@ class CLIController():
             self._cell = None
         self._view_chain.pop()
 
-    def _interact(self):
+    async def _interact(self):
         if self._view_chain[-1] == Views.LANDING:
             self._project = select_project(self._project_locator)
             self.append_view(Views.PROJECT)
@@ -470,7 +514,7 @@ class CLIController():
             self.append_view(Views.CELL)
         elif self._view_chain[-1] == Views.CELL:
             assert self._cell is not None
-            cell: str = interact_with_cell(self._map_root, self._cell)
+            cell: str = await interact_with_cell(self._map_root, self._cell)
             if cell is not None:
                 self._cell = cell
 

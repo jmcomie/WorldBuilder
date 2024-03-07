@@ -6,9 +6,11 @@ from gstk.graph.graph import Node
 from gstk.llmlib.object_generation import get_chat_completion_object_response
 from gstk.models.chatgpt import Message, Role
 
-from world_builder.map import MapRoot, SparseMapTree, MapRect, WorldBuilderNodeType
+from world_builder.map import MapRoot, SparseMapTree, MapRect, WorldBuilderNodeType, get_cell_prompt
 from world_builder.graph_registry import DescriptionMatrixData
 
+# Implement view context chain.
+# Implement generate child matrix.
 
 
 def get_parent_data_context(tree: SparseMapTree, node: Node):
@@ -36,16 +38,16 @@ def get_neighbor_data_context(tree: SparseMapTree, map_rect: MapRect, diameter: 
         coords_in_parent: tuple[int, int] = tree._map_hierarchy.get_coordinates_in_parent(_map_rect)
         node: Node = tree.get_data_node(parent_rect)
         if node:
-            return np.array(node.data.tiles)[coords_in_parent[1], coords_in_parent[0]]
+            return np.array(node.data.tiles)[*coords_in_parent]
 
     map_rect_neighbors = tree._map_hierarchy.get_rect_neighbors(map_rect, diameter)
     print(map_rect_neighbors)
     return np.vectorize(get_neighbor_description)(map_rect_neighbors)
 
 
-def get_description_matrix_context_messages(map_root: MapRoot, data: DescriptionMatrixData) -> Iterator[Message]:
-    neighbor_data = get_neighbor_data_context(map_root.tree, data.map_rect)
-    parent_data: list[str] = get_parent_data_context(map_root.tree, map_root.tree.get_data_node(data.map_rect))
+def get_description_matrix_context_messages(map_root: MapRoot, map_rect: MapRect) -> Iterator[Message]:
+    neighbor_data = get_neighbor_data_context(map_root.tree, map_rect)
+    parent_data: list[str] = get_parent_data_context(map_root.tree, map_root.tree.get_data_node(map_rect))
     map_root.data.height
     map_root.data.width
     map_root.data.draw_diameter
@@ -62,7 +64,7 @@ Create a {map_root.data.draw_diameter}x{map_root.data.draw_diameter} matrix with
             role=Role.SYSTEM,
             content=f"""\
 The total width of the map is {map_root.data.width} and the total height of the map is {map_root.data.height}.
-The area you are segmenting is a {data.map_rect.width}x{data.map_rect.height} area at ({data.map_rect.x}, {data.map_rect.y}).
+The area you are segmenting is a {map_rect.width}x{map_rect.height} area at ({map_rect.x}, {map_rect.y}).
 You are describing the root layout.
 
 """),
@@ -95,4 +97,11 @@ The root prompt:
 
 """)
         )
+
+    messages.append(
+        Message(
+            role=Role.USER,
+            content=get_cell_prompt(map_root, map_root.tree._map_hierarchy.get_map_rect_cell_identifier(map_rect))
+        )
+    )
     return messages
