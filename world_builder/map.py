@@ -259,6 +259,10 @@ class SparseMapTree:
     def root_node(self) -> Node:
         return self._map_root_node
 
+    @property
+    def hierarchy(self) -> MapHierarchy:
+        return self._map_hierarchy
+
     def get_data_node(self, map_rect: MapRect) -> Optional[Node]:
         self.ensure_rect_node_dict()
         return self._rect_data_node_dict.get(map_rect.to_tuple())
@@ -298,7 +302,7 @@ class SparseMapTree:
             parent_rect_node = new_node
         return parent_rect_node
 
-    def get_or_create_data_node(self, data: Union[MapMatrixData, DescriptionMatrixData], force_create: bool = False) -> Node:
+    def get_or_create_data_node(self, data: Union[MapMatrixData, DescriptionMatrixData]) -> Node:
         self.check_data(data)
 
         reload = False
@@ -318,6 +322,9 @@ class SparseMapTree:
         node.session.commit()
         self._rect_data_node_dict[data.map_rect.to_tuple()] = node
         return node
+
+    def ensure_data_node(self, map_rect: MapRect) -> Node:
+        return self.get_or_create_data_node(self._get_empty_model_instance(map_rect))
 
     def update_data_node(self, data: Union[MapMatrixData, DescriptionMatrixData]):
         self.check_data(data)
