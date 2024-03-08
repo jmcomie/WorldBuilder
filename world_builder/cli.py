@@ -6,7 +6,7 @@ import pprint
 import pydoc
 import sys
 import tempfile
-from typing import Callable, get_args
+from typing import Any, Callable, get_args
 import code
 import readline
 import rlcompleter
@@ -34,7 +34,7 @@ from world_builder.table import Table
 from world_builder.context import get_description_matrix_context_messages
 from world_builder.project import MapRoot, WorldBuilderProject, WorldBuilderProjectDirectory
 from world_builder.map import MAP_METADATA_DIRNAME, MapRootData, MapRoot, SparseMapTree, CELL_IDENTIFER_RE, ROOT_CELL_IDENTIFIER, get_cell_prompt, set_cell_prompt
-
+from world_builder.map_data_interface import get_gid_description_context_string
 from PyInquirer import prompt
 from prompt_toolkit.validation import Validator, ValidationError
 from PyInquirer import print_function
@@ -68,9 +68,25 @@ class CellOptions(StrEnum):
     VIEW_CONTEXT_CHAIN = "View Context Chain"
 
 
+class CellOptions(StrEnum):
+    VIEW_PROMPT = "View Cell Prompt"
+    EDIT_PROMPT = "Edit Cell Prompt"
+    VIEW_CHILD_MATRIX = "View Child Matrix"
+    GENERATE_CHILD_MATRIX = "Generate Child Matrix"
+    GOTO_CELL = "Goto Cell"    
+    VIEW_CONTEXT_CHAIN = "View Context Chain"
+
+
+class MapOptions(StrEnum):
+    GOTO_ROOT_CELL = "Goto Root Cell"
+    GOTO_CELL = "Goto Cell"
+    LIST_TILE_ASSETS = "List asset tiles"
+
+
 class BackNavigations(StrEnum):
     BACK = "Back"
     EXIT = "Exit"
+
 
 class Views(Enum):
     LANDING = 0
@@ -79,6 +95,10 @@ class Views(Enum):
     CELL = 3
     MATRIX = 4
     CONTEXT_CHAIN = 5
+
+
+def print_burgandy(text: str):
+    print(f"\033[38;5;88m{text}\033[0m")
 
 
 def get_validate_new_project_id_fn(project_locator: WorldBuilderProjectDirectory):
@@ -121,6 +141,7 @@ def get_validate_cell_identifier_fn(map_root: MapRoot):
                                   cursor_position=len(text))
         return True
     return validate_cell_identifier
+
 
 def get_landing_ui_questions_list(choices: list[str]) -> list[dict]:
     return [
@@ -186,6 +207,16 @@ def get_open_map_questions_list(available_map_roots: list[str]) -> list[dict]:
         }
     ]
 
+def get_map_options_questions_list(choices: list[str]) -> list[dict]:
+    return [
+        {
+            'type': 'list',
+            'name': 'user_option',
+            'message': 'Select option:',
+            'choices': choices + [BackNavigations.BACK]
+        }
+    ]
+
 
 def validate_diameter(text: str):
     if int(text) not in get_args(DrawDiameterInt):
@@ -217,6 +248,7 @@ def get_new_map_name_and_diameter_questions_list(existing_map_names: list[str]) 
         },
     ]
 
+
 def get_validate_width_and_height_fn(draw_diameter: int):
     def validate_width_and_height(text: str):
         if text == BACK_DIRECTIVE_INVOCATION_STRING:
@@ -226,7 +258,6 @@ def get_validate_width_and_height_fn(draw_diameter: int):
                                   cursor_position=len(text))
         return True
     return validate_width_and_height
-
 
 
 def get_map_asset_questions_list(project_resource_location: Path) -> list[dict]:
@@ -278,6 +309,7 @@ def get_cell_interface_questions_list(message: str, choices: list[str]) -> list[
         }
     ]
 
+
 def get_cell_identifier_questions_list(map_root: MapRoot) -> list[dict]:
     return [
         {
@@ -288,13 +320,16 @@ def get_cell_identifier_questions_list(map_root: MapRoot) -> list[dict]:
         }
     ]
 
+
 def select_project(project_locator: WorldBuilderProjectDirectory) -> WorldBuilderProject:
     # Project selection
 
     answer: dict = prompt(get_landing_ui_questions_list([m.value for m in ProjectOptions if m != ProjectOptions.OPEN_PROJECT or bool(project_locator.list_project_ids())]))
     # Project selection
     project_node: Node
-    if answer[PromptOptions.USER_OPTION] == ProjectOptions.NEW_PROJECT:
+    if not answer or answer[PromptOptions.USER_OPTION] == BackNavigations.EXIT:
+        raise ExitDirectiveException()
+    elif answer[PromptOptions.USER_OPTION] == ProjectOptions.NEW_PROJECT:
         answer_new: dict = prompt(get_new_project_questions_list(get_validate_new_project_id_fn(project_locator)))
         project_properties: ProjectProperties = ProjectProperties(
             id=answer_new['project_id'],
@@ -305,12 +340,10 @@ def select_project(project_locator: WorldBuilderProjectDirectory) -> WorldBuilde
         (project_locator.get_project_resource_location(project_properties.id) / MAP_METADATA_DIRNAME).mkdir(parents=True, exist_ok=True)
     elif answer[PromptOptions.USER_OPTION] == ProjectOptions.OPEN_PROJECT:
         answer_open: dict = prompt(get_open_project_questions_list(project_locator.list_project_ids()))
-        if answer_open[PromptOptions.USER_OPTION] == BackNavigations.BACK:
+        if not answer_open or answer_open[PromptOptions.USER_OPTION] == BackNavigations.BACK:
             raise BackDirectiveException()
         project_id: str = answer_open[PromptOptions.USER_OPTION]
         project_node = get_project(project_id, project_locator)
-    elif answer[PromptOptions.USER_OPTION] == BackNavigations.EXIT:
-        raise ExitDirectiveException()
     else:
         raise ValueError(f"Invalid mode option: {answer[PromptOptions.USER_OPTION]}")
 
@@ -323,8 +356,12 @@ def select_map_root(project: WorldBuilderProject) -> MapRoot:
     map_root_dict: dict[str, MapRoot] = project.get_map_root_dict()
     answer: dict = prompt(get_map_root_questions_list([m.value for m in MapRootOptions if m != MapRootOptions.OPEN_MAP_ROOT or bool(map_root_dict)]))
     map_root: MapRoot
-    if answer[PromptOptions.USER_OPTION] == MapRootOptions.NEW_MAP_ROOT:
+    if not answer or answer[PromptOptions.USER_OPTION] == BackNavigations.BACK:
+        raise BackDirectiveException()
+    elif answer[PromptOptions.USER_OPTION] == MapRootOptions.NEW_MAP_ROOT:
         answer_new = prompt(get_new_map_name_and_diameter_questions_list(map_root_dict.keys()))
+        if not answer_new or answer_new[PromptOptions.USER_OPTION] == BackNavigations.BACK:
+            raise BackDirectiveException()
         answer_new.update(prompt(get_new_map_width_and_height_questions_list(answer_new['draw_diameter'])))
         map_root = project.new_map_root(
                 MapRootData(name=answer_new['name'],
@@ -334,12 +371,10 @@ def select_map_root(project: WorldBuilderProject) -> MapRoot:
                             height=answer_new['height']))
     elif answer[PromptOptions.USER_OPTION] == MapRootOptions.OPEN_MAP_ROOT:
         answer_open: dict = prompt(get_open_map_questions_list(list(map_root_dict.keys())))
-        if answer_open[PromptOptions.USER_OPTION] == BackNavigations.BACK:
+        if not answer_open or answer_open[PromptOptions.USER_OPTION] == BackNavigations.BACK:
             raise BackDirectiveException()
         map_root_name: str = answer_open[PromptOptions.USER_OPTION]
         map_root: MapRoot = map_root_dict[map_root_name]
-    elif answer[PromptOptions.USER_OPTION] == BackNavigations.BACK:
-        raise BackDirectiveException()
     else:
         raise ValueError(f"Invalid map root option: {answer[PromptOptions.USER_OPTION]}")
 
@@ -417,10 +452,9 @@ def format_human_readable_cell_description(map_root: MapRoot, cell_identifier: s
 
 async def interact_with_cell(map_root: MapRoot, cell_identifier: str) -> tuple[Views, str]:
     header: str = format_human_readable_cell_description(map_root, cell_identifier)
-    #print(header)
-    print(f"\033[38;5;88m{header}\033[0m")
+    print_burgandy(header)
     answer: dict = prompt(get_cell_interface_questions_list("Select option", [m.value for m in CellOptions]))
-    if answer == BackNavigations.BACK:
+    if not answer or answer == BackNavigations.BACK:
         raise BackDirectiveException()
     elif answer[PromptOptions.USER_OPTION] == CellOptions.VIEW_PROMPT:
         view_prompt(map_root, cell_identifier)
@@ -438,6 +472,30 @@ async def interact_with_cell(map_root: MapRoot, cell_identifier: str) -> tuple[V
         raise BackDirectiveException()
     else:
         raise ValueError(f"Invalid cell option: {answer[PromptOptions.USER_OPTION]}")
+
+
+#class MapOptions(StrEnum):
+#    GOTO_ROOT_CELL = "Goto Root Cell"
+#    GOTO_CELL = "Goto Cell"
+#    SELECT_TILE_ASSETS = "Select asset"
+#    LIST_TILE_ASSETS = "List asset tiles"
+
+
+def interact_with_map_root(map_root: MapRoot) -> str:
+    answer: dict = prompt(get_map_options_questions_list([m.value for m in MapOptions]))
+    if not answer or answer[PromptOptions.USER_OPTION] == BackNavigations.BACK:
+        raise BackDirectiveException()
+    elif answer[PromptOptions.USER_OPTION] == MapOptions.GOTO_ROOT_CELL:
+        return ROOT_CELL_IDENTIFIER
+    elif answer[PromptOptions.USER_OPTION] == MapOptions.GOTO_CELL:
+        cell_answer: dict = prompt(get_cell_identifier_questions_list(map_root))
+        if not cell_answer or cell_answer[PromptOptions.USER_OPTION] == BackNavigations.BACK:
+            raise BackDirectiveException()
+        return cell_answer[PromptOptions.USER_OPTION]
+    elif answer[PromptOptions.USER_OPTION] == MapOptions.LIST_TILE_ASSETS:
+        pydoc.pager(get_gid_description_context_string(map_root.get_tiled_map()))
+    else:
+        raise ValueError(f"Invalid map option: {answer[PromptOptions.USER_OPTION]}")
 
 def view_matrix(map_root: MapRoot, cell: str):
     matrix_str: str
@@ -466,11 +524,11 @@ class CLIController():
             try:
                 await self._interact()
             except BackDirectiveException:
-                if self._cell == ROOT_CELL_IDENTIFIER:
-                    self.pop_view()
-                    self.pop_view()
-                else:
-                    self.pop_view()
+                #if self._cell == ROOT_CELL_IDENTIFIER:
+                #    self.pop_view()
+                #    self.pop_view()
+                #else:
+                self.pop_view()
             except ExitDirectiveException:
                 should_exit = True
 
@@ -494,7 +552,6 @@ class CLIController():
             self._project = None
         elif self._view_chain[-1] == Views.MAP:
             self._map_root = None
-            self._cell = None
         elif self._view_chain[-1] == Views.CELL:
             self._cell = None
         self._view_chain.pop()
@@ -507,11 +564,10 @@ class CLIController():
             self._map_root = select_map_root(self._project)
             self.append_view(Views.MAP)
         elif self._view_chain[-1] == Views.MAP:
-            # Combine MAP and CELL views for now. In the future, the map view
-            # may provide options such as to copy/delete the map, etc, distinct
-            # from the cell view.
-            self._cell = ROOT_CELL_IDENTIFIER
-            self.append_view(Views.CELL)
+            cell_identifier: str = interact_with_map_root(self._map_root)
+            if cell_identifier is not None:
+                self._cell = cell_identifier
+                self.append_view(Views.CELL)
         elif self._view_chain[-1] == Views.CELL:
             assert self._cell is not None
             cell: str = await interact_with_cell(self._map_root, self._cell)

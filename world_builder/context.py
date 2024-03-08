@@ -38,10 +38,13 @@ The following illustrates the structure of the parent context provided to you an
 Map description: A description of the entire map.
 """
 
-    depth_descriptions = [
-        "First level prompt describes subset area one ninth the size of the entire map, at the provided position in the inital matrix.",
-        "Second level prompt describes subset area nine times smaller than first level prompt at the provided position in the 3x3 parent matrix.",
-        "Third level prompt describes subset area nine times smaller than second level prompt at the provided position in the 3x3 parent matrix."
+    depth_descriptions: list[str] = []
+    if depth > 0:
+        for i in range(0, depth):
+            if i == 0:
+                depth_descriptions.append("First level prompt describes subset area one ninth the size of the entire map, at the provided position in the 3x3 inital matrix.")
+            else:
+                depth_descriptions.append(f"{LEVEL_LABEL_MAP[i]} level prompt describes subset area nine times smaller than f{LEVEL_LABEL_MAP[i-1]} level prompt at the provided position in the 3x3 parent matrix.")
     ]
     return system_message_base + os.linesep.join(depth_descriptions[:depth]) + os.linesep
 
@@ -50,7 +53,7 @@ Map description: A description of the entire map.
 def get_parent_data_context(tree: SparseMapTree, node: Node) -> Message:
     return Message(role=Role.SYSTEM, content=get_system_message(tree.hierarchy.get_rect_level(node.data.map_rect)))
 
-
+"""
 def get_neighbor_data_context(tree: SparseMapTree, map_rect: MapRect, diameter: int = 3) -> Optional[np.ndarray[object]]:
     if tree.hierarchy.get_rect_level(map_rect) == 0:
         return None
@@ -66,6 +69,8 @@ def get_neighbor_data_context(tree: SparseMapTree, map_rect: MapRect, diameter: 
     map_rect_neighbors = tree.hierarchy.get_rect_neighbors(map_rect, diameter)
     print(map_rect_neighbors)
     return np.vectorize(get_neighbor_description)(map_rect_neighbors)
+"""
+
 
 def get_cell_prompt_with_context(map_root: MapRoot, map_rect: MapRect) -> Message:
     cell_prompt: str = get_cell_prompt(map_root,
@@ -110,6 +115,13 @@ def get_description_matrix_context_messages(map_root: MapRoot, map_rect: MapRect
             map_root.tree, map_root.tree.ensure_data_node(map_rect))
 
     messages: list[Message] = [system_message]
+
+    #messages.append(
+    #    Message(
+    #        role=Role.USER,
+    #        content=get_cell_prompt_with_context(map_root, map_rect)
+    #    )
+    #)   
 
     messages.append(
         Message(

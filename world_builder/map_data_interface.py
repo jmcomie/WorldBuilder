@@ -26,6 +26,12 @@ def get_gid_tile_properties(tiled_map: TiledMap):
     return gid_tile_properties
 
 
+def get_gid_description_context_string(tiled_map: TiledMap):
+    gid_tile_properties: dict[int, dict[str, Any]] = get_gid_tile_properties(tiled_map)
+    return "".join([f"gid: {gid} description: {value['description']}\n" for gid, value
+                    in gid_tile_properties.items() if value and "description" in value])
+
+
 def get_gid_data(tiled_map: TiledMap) -> dict[int, GIDData]:
     gid_data: dict[int, dict[str, GIDData]] = {}
     for tileset in tiled_map.tilesets:

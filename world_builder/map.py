@@ -306,6 +306,7 @@ class SparseMapTree:
         self.check_data(data)
 
         reload = False
+        # Reload only if the parent rect has no data node.
         if self._map_hierarchy.get_rect_level(data.map_rect) > 0:
             parent_rect: MapRect = self._map_hierarchy.get_parent_rect(data.map_rect)
             reload = not self.has_data_node(parent_rect)
@@ -313,7 +314,11 @@ class SparseMapTree:
         self.ensure_rect_node_dict(reload=reload)
         if self.has_data_node(data.map_rect):
             node: Node = self._rect_data_node_dict[data.map_rect.to_tuple()]
-            node.data = data
+            # This is a little unsatisfying of a check. When the project is proven out
+            # this code will merit a bit of a reshuffle to let it beautifully cohere with
+            # the conceptual requirements of the product.
+            if not np.all(np.array(data.tiles) == "") and not np.all(np.array(data.tiles) == 0) and not len(data.tiles) == 0:
+                node.data = data
         else:
             parent_node: Node = self._ensure_parents_exist(data.map_rect)
             node: Node = parent_node.create_child(data)
@@ -324,6 +329,10 @@ class SparseMapTree:
         return node
 
     def ensure_data_node(self, map_rect: MapRect) -> Node:
+        # This might be causing a bug wherein we overwrite the data of the node.
+        # We shouldn't need to do a full tree traversal every time, so the remedy
+        # is to check the coordination of all methods that interface with the
+        # node tree.
         return self.get_or_create_data_node(self._get_empty_model_instance(map_rect))
 
     def update_data_node(self, data: Union[MapMatrixData, DescriptionMatrixData]):
@@ -401,20 +410,9 @@ class MapRoot:
     def tree(self) -> SparseMapTree:
         return self._tree
 
-    def generate_map_from_prompt(self, prompt: str, update_existing: bool = False):
-        # Currently not supported:
-        #    layers,
-        #    draw_width draw_height not equaling width and height
-        #    update_existing
-        if self.data.layer_names is not None:
-            raise ValueError("Layers are not supported yet.")
-        if self.data.draw_width != self.data.width or self.data.draw_height != self.data.height:
-            raise ValueError("Drawing width and height must equal width and height.")
-        if update_existing:
-            raise ValueError("Update existing is not supported yet.")
-
     # Methods below are related to Asset Management
     def get_image_buffer_from_tile_matrix(self, tile_matrix: list[list[int]]) -> Any:
+        raise NotImplementedError
         tiled_map: TiledMap = self.get_tiled_map()
         gid_tile_properties: dict[int, dict[str, Any]] = get_gid_tile_properties(tiled_map)
         tiled_map.get_tile_image_by_gid(3)
