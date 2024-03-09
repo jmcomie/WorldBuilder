@@ -1,4 +1,5 @@
 import asyncio
+from itertools import product
 import devtools
 from enum import Enum, StrEnum
 from pathlib import Path
@@ -6,7 +7,7 @@ import pprint
 import pydoc
 import sys
 import tempfile
-from typing import Any, Callable, get_args
+from typing import Any, Callable, Optional, Type, get_args
 import code
 import readline
 import rlcompleter
@@ -16,6 +17,7 @@ import rlcompleter
 import collections
 
 import numpy as np
+from pydantic import BaseModel
 collections.Mapping = collections.abc.Mapping
 # END Monkey patch.
 
@@ -33,8 +35,8 @@ from world_builder.graph_registry import DrawDiameterInt, MapRootData, WorldBuil
 from world_builder.table import Table
 from world_builder.context import get_description_matrix_context_messages
 from world_builder.project import MapRoot, WorldBuilderProject, WorldBuilderProjectDirectory
-from world_builder.map import MAP_METADATA_DIRNAME, MapRootData, MapRoot, SparseMapTree, CELL_IDENTIFER_RE, ROOT_CELL_IDENTIFIER, get_cell_prompt, set_cell_prompt
-from world_builder.map_data_interface import get_gid_description_context_string
+from world_builder.map import MAP_METADATA_DIRNAME, MapHierarchy, MapRootData, MapRoot, SparseMapNode, SparseMapTree, CELL_IDENTIFER_RE, ROOT_CELL_IDENTIFIER, get_cell_prompt, set_cell_prompt
+from world_builder.map_data_interface import get_gid_description_context_string, get_image_from_tile_matrix
 from PyInquirer import prompt
 from prompt_toolkit.validation import Validator, ValidationError
 from PyInquirer import print_function
@@ -66,22 +68,14 @@ class CellOptions(StrEnum):
     GENERATE_CHILD_MATRIX = "Generate Child Matrix"
     GOTO_CELL = "Goto Cell"    
     VIEW_CONTEXT_CHAIN = "View Context Chain"
-
-
-class CellOptions(StrEnum):
-    VIEW_PROMPT = "View Cell Prompt"
-    EDIT_PROMPT = "Edit Cell Prompt"
-    VIEW_CHILD_MATRIX = "View Child Matrix"
-    GENERATE_CHILD_MATRIX = "Generate Child Matrix"
-    GOTO_CELL = "Goto Cell"    
-    VIEW_CONTEXT_CHAIN = "View Context Chain"
+    VIEW_PROJECTED_IMAGE = "View Projected Image"
 
 
 class MapOptions(StrEnum):
     GOTO_ROOT_CELL = "Goto Root Cell"
     GOTO_CELL = "Goto Cell"
     LIST_TILE_ASSETS = "List asset tiles"
-
+    VIEW_IMAGE = "View Image"
 
 class BackNavigations(StrEnum):
     BACK = "Back"
@@ -163,6 +157,20 @@ def get_open_project_questions_list(available_project_ids: list[str]) -> list[di
             'choices': available_project_ids + [BackNavigations.BACK]
         }
     ]
+
+
+def view_projected_image(map_root: MapRoot, cell_identifier: str):
+    map_rect: MapRect = map_root.tree.hierarchy.get_cell_identifier_map_rect(cell_identifier)
+    tile_array: np.array = np.zeros((map_rect.width, map_rect.height)).astype(int)
+
+    for leaf_map_rect in map_root.tree.hierarchy.get_rect_matrix(map_root.tree.hierarchy.get_tree_height() - 1).flatten():
+        if leaf_map_rect.x < map_rect.width + map_rect.x and leaf_map_rect.y < map_rect.height + map_rect.y and \
+                leaf_map_rect.x >= map_rect.x and leaf_map_rect.y >= map_rect.y:
+            sparse_node: SparseMapNode = map_root.tree.get_sparse_node_from_cell_identifier(
+                                map_root.tree.hierarchy.get_map_rect_cell_identifier(leaf_map_rect))
+            if sparse_node.has_data():
+                tile_array[leaf_map_rect.y:leaf_map_rect.y+map_root.data.draw_diameter, leaf_map_rect.x:leaf_map_rect.x+map_root.data.draw_diameter] = np.array(sparse_node.data.tiles)
+    get_image_from_tile_matrix(tile_array, map_root.get_tiled_map()).show()
 
 
 def get_new_project_questions_list(project_id_validator: Callable) -> list[dict]:
@@ -360,7 +368,7 @@ def select_map_root(project: WorldBuilderProject) -> MapRoot:
         raise BackDirectiveException()
     elif answer[PromptOptions.USER_OPTION] == MapRootOptions.NEW_MAP_ROOT:
         answer_new = prompt(get_new_map_name_and_diameter_questions_list(map_root_dict.keys()))
-        if not answer_new or answer_new[PromptOptions.USER_OPTION] == BackNavigations.BACK:
+        if not answer_new:
             raise BackDirectiveException()
         answer_new.update(prompt(get_new_map_width_and_height_questions_list(answer_new['draw_diameter'])))
         map_root = project.new_map_root(
@@ -425,10 +433,22 @@ async def generate_child_matrix(map_root: MapRoot, cell_identifier: str):
     print("Generating child matrix")
     map_rect: MapRect = map_root.tree.get_sparse_node_from_cell_identifier(cell_identifier).rect
     messages: list[Message] = get_description_matrix_context_messages(map_root, map_rect)
-    res: list = await get_chat_completion_object_response(list(GraphRegistry.get_node_types(DescriptionMatrixData))[0], messages)
-    data: DescriptionMatrixData = DescriptionMatrixData(map_rect=map_rect, tiles=res.tiles)
-    data.tiles = res.tiles
+    map_rect_data_type: Type[DescriptionMatrixData|MapMatrixData] = map_root.tree.get_map_rect_data_type(map_rect)
+    if map_rect_data_type == MapMatrixData:
+        res: list = await get_chat_completion_object_response(list(GraphRegistry.get_node_types(MapMatrixData))[0], messages)
+        data: MapMatrixData = MapMatrixData(map_rect=map_rect, tiles=res.tiles)
+    elif map_rect_data_type == DescriptionMatrixData:
+        res: list = await get_chat_completion_object_response(list(GraphRegistry.get_node_types(DescriptionMatrixData))[0], messages)
+        data: DescriptionMatrixData = DescriptionMatrixData(map_rect=map_rect, tiles=res.tiles)
+    else:
+        raise ValueError(f"Invalid map_rect_data_type: {map_rect_data_type}")
     map_root.tree.get_or_create_data_node(data)
+
+
+async def generate_recursive_matrices(map_root: MapRoot, cell_identifier: str):
+        map_rect: MapRect = map_root.tree.get_sparse_node_from_cell_identifier(cell_identifier).rect
+
+
 
 def view_context_chain(map_root: MapRoot, cell_identifier: str):
     map_rect: MapRect = map_root.tree.get_sparse_node_from_cell_identifier(cell_identifier).rect
@@ -448,6 +468,8 @@ def format_human_readable_cell_description(map_root: MapRoot, cell_identifier: s
     header = f"{cell_identifier_human_readable}\n{'-' * len(cell_identifier_human_readable)}"
     header += f"\nProjected Rect: x:{map_rect.x} y:{map_rect.y} w:{map_rect.width} h:{map_rect.height}"
     header += f"\nCell Identifier: {cell_identifier}"
+    if map_root.tree.hierarchy.get_rect_level(map_rect) > 0:
+        header += f"\nParent Cell Identifier: {map_root.tree.hierarchy.get_map_rect_cell_identifier(map_root.tree.hierarchy.get_parent_rect(map_rect))}"
     return header
 
 async def interact_with_cell(map_root: MapRoot, cell_identifier: str) -> tuple[Views, str]:
@@ -470,6 +492,8 @@ async def interact_with_cell(map_root: MapRoot, cell_identifier: str) -> tuple[V
         return prompt(get_cell_identifier_questions_list(map_root))[PromptOptions.USER_OPTION]
     elif answer[PromptOptions.USER_OPTION] == BackNavigations.BACK:
         raise BackDirectiveException()
+    elif answer[PromptOptions.USER_OPTION] == CellOptions.VIEW_PROJECTED_IMAGE:
+        view_projected_image(map_root, cell_identifier)
     else:
         raise ValueError(f"Invalid cell option: {answer[PromptOptions.USER_OPTION]}")
 
@@ -494,6 +518,8 @@ def interact_with_map_root(map_root: MapRoot) -> str:
         return cell_answer[PromptOptions.USER_OPTION]
     elif answer[PromptOptions.USER_OPTION] == MapOptions.LIST_TILE_ASSETS:
         pydoc.pager(get_gid_description_context_string(map_root.get_tiled_map()))
+    elif answer[PromptOptions.USER_OPTION] == MapOptions.VIEW_IMAGE:
+        view_projected_image(map_root, ROOT_CELL_IDENTIFIER)
     else:
         raise ValueError(f"Invalid map option: {answer[PromptOptions.USER_OPTION]}")
 
@@ -503,7 +529,19 @@ def view_matrix(map_root: MapRoot, cell: str):
     if not sparse_node.has_data():
         matrix_str = "No data."
     else:
-        matrix_str = str(Table(sparse_node.data.tiles, 20, True))
+        assert isinstance(sparse_node.data, BaseModel)
+        data = sparse_node.data.model_copy()
+        if isinstance(data, DescriptionMatrixData):
+            hierarchy: MapHierarchy = map_root.tree.hierarchy
+            rect_child_matrix: np.array = hierarchy.get_rect_child_matrix(sparse_node.rect)
+            arr = np.array(data.tiles)
+            assert rect_child_matrix.shape == arr.shape
+            for y,x in product(range(arr.shape[0]), range(arr.shape[1])):
+                cell_identifier = hierarchy.get_map_rect_cell_identifier(rect_child_matrix[y,x])
+                arr[y,x] = f"{cell_identifier}: {str(arr[y,x])}"
+            matrix_str = str(Table(arr.tolist(), 20, True))
+        else:
+            matrix_str = str(Table(np.array(sparse_node.data.tiles).astype(str).tolist(), 20, True))
     pydoc.pager(matrix_str)
 
 
@@ -518,7 +556,16 @@ class CLIController():
         self._map_root: MapRoot = None
         self._cell: str = None
 
-    async def run(self):
+    @property
+    def project(self) -> WorldBuilderProject:
+        return self._project
+
+    @property
+    def map_root(self) -> MapRoot:
+        return self._map_root
+
+    async def run(self, exit_view: Optional[Views] = None):
+        self._view_chain = [Views.LANDING]
         should_exit: bool = False
         while not should_exit:
             try:
@@ -530,6 +577,8 @@ class CLIController():
                 #else:
                 self.pop_view()
             except ExitDirectiveException:
+                should_exit = True
+            if exit_view is not None and self._view_chain[-1] == exit_view:
                 should_exit = True
 
     def append_view(self, view: Views):
@@ -575,15 +624,6 @@ class CLIController():
                 self._cell = cell
 
 
-
-async def run():
-    project_locator = WorldBuilderProjectDirectory()
-
-    # If select_project and select_map_root are async, await them. Otherwise, make sure they are synchronous calls.
-    project: WorldBuilderProject = select_project(project_locator)
-    map_root: MapRoot = select_map_root(project)
-    assert map_root.has_asset()
-
 """
 Open
 List
@@ -593,12 +633,46 @@ Up
 """
 
 async def start():
-    project_locator = WorldBuilderProjectDirectory()
-    controller = CLIController(project_locator)
+    controller = CLIController(WorldBuilderProjectDirectory())
     await controller.run()
 
+def start_interactive_console():
+    vars = globals()
+    vars.update(locals())
+
+    readline.set_completer(rlcompleter.Completer(vars).complete)
+    if sys.platform == 'darwin':
+        readline.parse_and_bind("bind ^I rl_complete")
+    else:
+        readline.parse_and_bind("tab: complete")
+    code.InteractiveConsole(vars).interact()
+
+
+async def start_interpreter():
+    global project
+    global map_root
+
+    controller = CLIController(WorldBuilderProjectDirectory())
+    await controller.run(exit_view=Views.MAP)
+    while controller.project is not None:    
+        project = controller.project
+        map_root = controller.map_root
+        start_interactive_console()
+        await controller.run(exit_view=Views.MAP)
+    
+
+
 def main():
-    asyncio.run(start())
+    use_interpreter_mode: bool = any([arg in {"-i", "--interpreter"} for arg in sys.argv])
+    if use_interpreter_mode:
+        asyncio.run(start_interpreter())
+    else:
+        asyncio.run(start())
+
 
 if __name__ == "__main__":
+    print(sys.argv)
+
+
+
     main()

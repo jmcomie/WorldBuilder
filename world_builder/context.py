@@ -8,6 +8,7 @@ from gstk.models.chatgpt import Message, Role
 
 from world_builder.map import MapRoot, SparseMapTree, MapRect, WorldBuilderNodeType, get_cell_prompt
 from world_builder.graph_registry import DescriptionMatrixData
+from world_builder.map_data_interface import get_gid_description_context_string
 
 # Implement view context chain.
 # Implement generate child matrix.
@@ -25,33 +26,52 @@ LEVEL_LABEL_MAP: dict[int, str] = {
     9: "tenth"
 }
 
-def get_system_message(depth: 0):
-    system_message_base: str = """\
+def get_system_message(map_root: MapRoot, depth: int):
+    if depth != map_root.tree.hierarchy.get_tree_height() - 1:
+        system_message_base: str = f"""\
 The root prompt is a description of the entire map. It is the first prompt in the recursive chain of prompts that describe the map.
 
-You are assisting in the creation of an 81x81 tile map.  To better utilize your internal semantic vector space, rather than being asked to create the 81x81 tile map in one go, you will create a 3x3 prompt matrix that divides the entire map into 9 cells. Each cell is to contain a prompt describing its corresponding projected area on the map, with a linguistic complexity appropriate to the map description. From there, you will create a 3x3 prompt matrix representing the areas below each of the 9 initial cells, and so on, until you have created the 81x81 tile map.  Note that, accordingly, each level of the map contains nine times more total cells than the level above it, and each cell corresponds to nine times less area of the tile map than the cells in the level above it.
+You are assisting in the creation of an {map_root.data.width}x{map_root.data.height} tile map.  To better utilize your internal semantic vector space, rather than being asked to create the {map_root.data.width}x{map_root.data.height} tile map in one go, you will create a {map_root.data.draw_diameter}x{map_root.data.draw_diameter} prompt matrix that divides the entire map into 9 cells. Each cell is to contain a prompt describing its corresponding projected area on the map, with a linguistic complexity appropriate to the map description. From there, you will create a {map_root.data.draw_diameter}x{map_root.data.draw_diameter} prompt matrix representing the areas below each of the 9 initial cells, and so on, until you have created the {map_root.data.width}x{map_root.data.height} tile map.  Note that, accordingly, each level of the map contains nine times more total cells than the level above it, and each cell corresponds to nine times less area of the tile map than the cells in the level above it.
 
-To assist in your creation of the map via these matrices, you are provided the following context: the overall map description, each recursive parent prompt above the matrix being created, and the position of each recursive parent prompt in the 3x3 matrix in which it was created. For example, a map root description of a circle of trees spanning the entire map might have in position 1,1 of its initial prompt matrix a directive for creating the left middle of the circle of trees (approximating one eighth the arc of the circle), and in position 3,3 of its initial prompt matrix a directive for creating the bottom right of the circle of trees, and so on. The recursive parent prompts are provided to help you maintain consistency with the map description as you create the 3x3 prompt matrices.
+To assist in your creation of the map via these matrices, you are provided the following context: the overall map description, each recursive parent prompt above the matrix being created, and the position of each recursive parent prompt in the {map_root.data.draw_diameter}x{map_root.data.draw_diameter} matrix in which it was created. For example, a map root description of a circle of trees spanning the entire map might have in position 1,1 of its initial prompt matrix a directive for creating the left middle of the circle of trees (approximating one eighth the arc of the circle), and in position 3,3 of its initial prompt matrix a directive for creating the bottom right of the circle of trees, and so on. The recursive parent prompts are provided to help you maintain consistency with the map description as you create the {map_root.data.draw_diameter}x{map_root.data.draw_diameter} prompt matrices.
+
+The following illustrates the structure of the parent context provided to you and highlights the recursive nature of the prompts and their increasing specificity with respect to tile map area:
+
+Map description: A description of the entire map.
+"""
+    else:
+        system_message_base: str = f"""\
+The root prompt is a description of the entire map. It is the first prompt in the recursive chain of prompts that describe the map.
+
+You are assisting in the creation of an {map_root.data.width}x{map_root.data.height} tile GID map.  To better utilize your internal semantic vector space, rather than being asked to create the {map_root.data.width}x{map_root.data.height} tile map in one go, you will create a {map_root.data.draw_diameter}x{map_root.data.draw_diameter} prompt matrix that divides the entire map into 9 cells. Each cell is to contain a prompt describing its corresponding projected area on the map, with a linguistic complexity appropriate to the map description. From there, you will create a {map_root.data.draw_diameter}x{map_root.data.draw_diameter} prompt matrix representing the areas below each of the 9 initial cells, and so on, until you have created the {map_root.data.width}x{map_root.data.height} tile map. The non-leaf level values you create are 3x3 prompt string matrices, and leaf level values are {map_root.data.draw_diameter}x{map_root.data.draw_diameter} integer tile map GID values.  Note that each level of the map contains nine times more total cells than the level above it, and each cell corresponds to nine times less area of the tile map than the cells in the level above it.
+
+To assist in your creation of the tile GID map via these matrices, you are provided tile map context and for which each GID in the tile GID matrix output is contained in the tile map context.
+
+Further you provided the following key context: the overall map description, each recursive parent prompt above the matrix being created, and the position of each recursive parent prompt in the {map_root.data.draw_diameter}x{map_root.data.draw_diameter} matrix in which it was created. For example, a map root description of a circle of trees spanning the entire map might have in position 1,1 of its initial prompt matrix a directive for creating the left middle of the circle of trees (approximating one eighth the arc of the circle), and in position 3,3 of its initial prompt matrix a directive for creating the bottom right of the circle of trees, and so on. The recursive parent prompts are provided to help you maintain consistency with the map description as you create the {map_root.data.draw_diameter}x{map_root.data.draw_diameter} prompt matrices.
 
 The following illustrates the structure of the parent context provided to you and highlights the recursive nature of the prompts and their increasing specificity with respect to tile map area:
 
 Map description: A description of the entire map.
 """
 
+#     print(f"""You are creating a 2D tilemap for a 2D game represented as integers in a CSV.
+# Create a 3x3 matrix in which each cell is one of the gid integers below, and that adheres to description.
+#
+
     depth_descriptions: list[str] = []
     if depth > 0:
         for i in range(0, depth):
             if i == 0:
-                depth_descriptions.append("First level prompt describes subset area one ninth the size of the entire map, at the provided position in the 3x3 inital matrix.")
+                depth_descriptions.append(f"First level prompt describes subset area one ninth the size of the entire map, at the provided position in the {map_root.data.draw_diameter}x{map_root.data.draw_diameter} inital matrix.")
             else:
-                depth_descriptions.append(f"{LEVEL_LABEL_MAP[i]} level prompt describes subset area nine times smaller than f{LEVEL_LABEL_MAP[i-1]} level prompt at the provided position in the 3x3 parent matrix.")
-    ]
-    return system_message_base + os.linesep.join(depth_descriptions[:depth]) + os.linesep
+                depth_descriptions.append(f"{LEVEL_LABEL_MAP[i]} level prompt describes subset area nine times smaller than {LEVEL_LABEL_MAP[i-1]} level prompt at the provided position in the {map_root.data.draw_diameter}x{map_root.data.draw_diameter} parent matrix.")
+    print(depth_descriptions)
+    return system_message_base + os.linesep.join(depth_descriptions) + os.linesep
 
 
 
-def get_parent_data_context(tree: SparseMapTree, node: Node) -> Message:
-    return Message(role=Role.SYSTEM, content=get_system_message(tree.hierarchy.get_rect_level(node.data.map_rect)))
+def get_parent_data_context(map_root: MapRoot, node: Node) -> Message:
+    return Message(role=Role.SYSTEM, content=get_system_message(map_root, map_root.tree.hierarchy.get_rect_level(node.data.map_rect)))
 
 """
 def get_neighbor_data_context(tree: SparseMapTree, map_rect: MapRect, diameter: int = 3) -> Optional[np.ndarray[object]]:
@@ -83,9 +103,12 @@ def get_cell_prompt_with_context(map_root: MapRoot, map_rect: MapRect) -> Messag
     prompt_str: str = ""
     level: int = map_root.tree.hierarchy.get_rect_level(map_rect)
     if level == 0:
-        prompt_str += f"Create the {LEVEL_LABEL_MAP[level]} 3x3 matrix for the following map description: " + cell_prompt
+        prompt_str += f"Create the {LEVEL_LABEL_MAP[level]} {map_root.data.draw_diameter}x{map_root.data.draw_diameter} matrix for the following map description: " + cell_prompt
     elif level < 4:
-        prompt_str += f"Create a {LEVEL_LABEL_MAP[level]} level 3x3 matrix for the following prompt: " + cell_prompt
+        if level == map_root.tree.hierarchy.get_tree_height() - 1:
+            prompt_str += f"Create a leaf level {map_root.data.draw_diameter}x{map_root.data.draw_diameter} tile GID matrix for the following prompt: " + cell_prompt
+        else:
+            prompt_str += f"Create a {LEVEL_LABEL_MAP[level]} level {map_root.data.draw_diameter}x{map_root.data.draw_diameter} matrix for the following prompt: " + cell_prompt
     else:
         # This is an arbitrary limit, though even 10 level map is probably
         # prohibitively large.
@@ -95,9 +118,10 @@ def get_cell_prompt_with_context(map_root: MapRoot, map_rect: MapRect) -> Messag
     if parent:
         while parent.node_type != WorldBuilderNodeType.MAP_ROOT:
             parent_level = map_root.tree.hierarchy.get_rect_level(parent.data.map_rect)
+            print(f"Parent level: {parent_level}")
             assert parent_level != level and parent_level < level
             coords_in_parent = map_root.tree.hierarchy.get_coordinates_in_parent(node.data.map_rect)
-            parent_context.insert(0, f"{LEVEL_LABEL_MAP[parent_level]} level prompt: {np.array(parent.data.tiles)[*coords_in_parent]}")
+            parent_context.insert(0, f"{LEVEL_LABEL_MAP[parent_level][0].upper() + LEVEL_LABEL_MAP[parent_level][1:]} level prompt: {np.array(parent.data.tiles)[*coords_in_parent]}")
             node = parent
             parent = parent.parent
     assert parent is None or parent.node_type == WorldBuilderNodeType.MAP_ROOT
@@ -105,14 +129,16 @@ def get_cell_prompt_with_context(map_root: MapRoot, map_rect: MapRect) -> Messag
         parent_context.insert(0, "Map description: " + parent.data.description)
     if level > 0:
         assert parent_context, "Parent context should not be empty for levels > 0"
-        prompt_str += f"\n\nParent context:\n\n {os.linesep.join(parent_context)}"
+        prompt_str += f"\n\nParent context:\n\n{os.linesep.join(parent_context)}"
+    if level == map_root.tree.hierarchy.get_tree_height() - 1:
+        prompt_str += f"\n\nTile map context:\n\n{get_gid_description_context_string(map_root.get_tiled_map())}"
     return prompt_str
 
 def get_description_matrix_context_messages(map_root: MapRoot, map_rect: MapRect) -> Iterator[Message]:
     #neighbor_data = get_neighbor_data_context(map_root.tree, map_rect)
 
     system_message: Message = get_parent_data_context(
-            map_root.tree, map_root.tree.ensure_data_node(map_rect))
+            map_root, map_root.tree.ensure_data_node(map_rect))
 
     messages: list[Message] = [system_message]
 

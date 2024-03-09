@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 import re
 import shutil
-from typing import Any, Callable, Iterator, Optional, TypeVar, Union
+from typing import Any, Callable, Iterator, Optional, Type, TypeVar, Union
 from gstk.graph.registry import GraphRegistry
 from pydantic import BaseModel
 from pytmx import TiledMap, TiledTileset
@@ -282,18 +282,26 @@ class SparseMapTree:
         else:
             return DescriptionMatrixData(map_rect=map_rect, tiles=np.empty((self._map_root_node.data.draw_diameter, self._map_root_node.data.draw_diameter), dtype=str).tolist())
 
+    def get_map_rect_data_type(self, map_rect: MapRect) -> Type[Union[MapMatrixData, DescriptionMatrixData]]:
+        if self._map_hierarchy.get_tree_height() -1 == self._map_hierarchy.get_rect_level(map_rect):
+            return MapMatrixData
+        else:
+            return DescriptionMatrixData
+
     def _ensure_parents_exist(self, map_rect: MapRect) -> Node:
         parent_chain: list[MapRect] = []
         current_rect: MapRect = map_rect
 
         if self._map_hierarchy.get_rect_level(map_rect) > 0:
+            # in level 1 case, current_rect becomes the sole level 0 rect. it will have a data node, so there will be no parent chain.
             current_rect = self._map_hierarchy.get_parent_rect(map_rect)
             # Ascend the tree until we find a node that has a data node.
             while not self.has_data_node(current_rect) and self._map_hierarchy.get_rect_level(current_rect) >= 0:
                 parent_chain.append(current_rect)
                 current_rect = self._map_hierarchy.get_parent_rect(current_rect)
 
-        parent_rect_node: Node = self.get_data_node(current_rect) if self._map_hierarchy.get_rect_level(current_rect) != 0 else self._map_root_node
+        # this logic is buggy when connecting rect level 0 its children
+        parent_rect_node: Node = self.get_data_node(current_rect) if self._map_hierarchy.get_rect_level(map_rect) != 0 else self._map_root_node
         # Create in descending order.
         for rect in reversed(parent_chain):
             new_node: Node = parent_rect_node.create_child(self._get_empty_model_instance(rect))
