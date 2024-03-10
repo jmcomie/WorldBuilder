@@ -70,8 +70,8 @@ Map description: A description of the entire map.
 
 
 
-def get_parent_data_context(map_root: MapRoot, node: Node) -> Message:
-    return Message(role=Role.SYSTEM, content=get_system_message(map_root, map_root.tree.hierarchy.get_rect_level(node.data.map_rect)))
+def get_parent_data_context(map_root: MapRoot, map_rect: MapRect) -> Message:
+    return Message(role=Role.SYSTEM, content=get_system_message(map_root, map_root.tree.hierarchy.get_rect_level(map_rect)))
 
 """
 def get_neighbor_data_context(tree: SparseMapTree, map_rect: MapRect, diameter: int = 3) -> Optional[np.ndarray[object]]:
@@ -134,13 +134,37 @@ def get_cell_prompt_with_context(map_root: MapRoot, map_rect: MapRect) -> Messag
         prompt_str += f"\n\nTile map context:\n\n{get_gid_description_context_string(map_root.get_tiled_map())}"
     return prompt_str
 
-def get_description_matrix_context_messages(map_root: MapRoot, map_rect: MapRect) -> Iterator[Message]:
-    #neighbor_data = get_neighbor_data_context(map_root.tree, map_rect)
+def get_map_parent_chain(map_root: MapRoot, map_rect: MapRect) -> Iterator[MapRect]:
+    if map_root.tree.hierarchy.get_rect_level(map_rect) == 0:
+        return
+    current_map_rect: MapRect = map_root.tree.hierarchy.get_parent_rect(map_rect)
+    while map_root.tree.hierarchy.get_rect_level(current_map_rect) >= 0:
+        yield current_map_rect
+        if map_root.tree.hierarchy.get_rect_level(current_map_rect) == 0:
+            break
+        current_map_rect = map_root.tree.hierarchy.get_parent_rect(current_map_rect)
+    
+def get_description_matrix_context_messages(
+        map_root: MapRoot, map_rect: MapRect) -> Iterator[Message]:
+    messages: list[Message] = []
+    current_map_rect: MapRect = map_rect
 
-    system_message: Message = get_parent_data_context(
-            map_root, map_root.tree.ensure_data_node(map_rect))
-
-    messages: list[Message] = [system_message]
+    parent_map_rects = reversed(list(get_map_parent_chain(map_root, map_rect)))
+    for parent_map_rect in parent_map_rects:
+        node: Node = map_root.tree.get_data_node(parent_map_rect)
+        if node is None:
+            continue
+        messages.extend([
+            get_parent_data_context(map_root, parent_map_rect),
+            Message(
+                role=Role.USER,
+                content=get_cell_prompt_with_context(map_root, parent_map_rect)
+            ),
+            Message(
+                role=Role.ASSISTANT,
+                content=f"tiles:\n{node.data.tiles}"
+            )
+        ])
 
     #messages.append(
     #    Message(
@@ -149,10 +173,11 @@ def get_description_matrix_context_messages(map_root: MapRoot, map_rect: MapRect
     #    )
     #)   
 
-    messages.append(
+    messages.extend([
+        get_parent_data_context(map_root, map_rect),
         Message(
             role=Role.USER,
             content=get_cell_prompt_with_context(map_root, map_rect)
         )
-    )
+    ])
     return messages

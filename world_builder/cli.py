@@ -56,9 +56,11 @@ class ProjectOptions(StrEnum):
     OPEN_PROJECT = "Open project"
 
 
-class MapRootOptions(StrEnum):
+class ProjectViewOptions(StrEnum):
     NEW_MAP_ROOT = "New map"
     OPEN_MAP_ROOT = "Open map"
+    RENAME_MAP = "Rename Map"
+    CLONE_MAP = "Clone Map"
 
 
 class CellOptions(StrEnum):
@@ -66,16 +68,20 @@ class CellOptions(StrEnum):
     EDIT_PROMPT = "Edit Cell Prompt"
     VIEW_CHILD_MATRIX = "View Child Matrix"
     GENERATE_CHILD_MATRIX = "Generate Child Matrix"
-    GOTO_CELL = "Goto Cell"    
+    GENERATE_RECURSIVE_MATRICES = "Generate Recursive Matrices"
+    GOTO_CELL = "Goto Cell"
     VIEW_CONTEXT_CHAIN = "View Context Chain"
     VIEW_PROJECTED_IMAGE = "View Projected Image"
-
+    VIEW_LEVEL_COUNTS = "View Level Counts"
+    DELETE_SUBTREE = "Delete Subtree"
 
 class MapOptions(StrEnum):
     GOTO_ROOT_CELL = "Goto Root Cell"
     GOTO_CELL = "Goto Cell"
     LIST_TILE_ASSETS = "List asset tiles"
     VIEW_IMAGE = "View Image"
+    READONLY = "Set Readonly"
+
 
 class BackNavigations(StrEnum):
     BACK = "Back"
@@ -168,7 +174,7 @@ def view_projected_image(map_root: MapRoot, cell_identifier: str):
                 leaf_map_rect.x >= map_rect.x and leaf_map_rect.y >= map_rect.y:
             sparse_node: SparseMapNode = map_root.tree.get_sparse_node_from_cell_identifier(
                                 map_root.tree.hierarchy.get_map_rect_cell_identifier(leaf_map_rect))
-            if sparse_node.has_data():
+            if sparse_node.has_data() and np.array(sparse_node.data.tiles).shape == (map_root.data.draw_diameter, map_root.data.draw_diameter):
                 tile_array[leaf_map_rect.y:leaf_map_rect.y+map_root.data.draw_diameter, leaf_map_rect.x:leaf_map_rect.x+map_root.data.draw_diameter] = np.array(sparse_node.data.tiles)
     get_image_from_tile_matrix(tile_array, map_root.get_tiled_map()).show()
 
@@ -233,25 +239,27 @@ def validate_diameter(text: str):
     return True
 
 
-def get_new_map_name_and_diameter_questions_list(existing_map_names: list[str]) -> list[dict]:
+def get_new_map_name_and_diameter_questions_list(existing_map_names: list[str], map_root: Optional[MapRoot] = None) -> list[dict]:
     return [
         {
             'type': 'input',
             'name': 'name',
             'message': 'Map name:',
+            'default': map_root is not None and map_root.data.name or "",
             'validate': get_validate_new_map_root_id_fn(existing_map_names)
         },
         {
             'type': 'input',
             'name': 'description',
             'message': 'Description:',
+            'when': lambda x: map_root is None,
             'validate': lambda text: len(text) > 20 and len(text) < 500
         },
         {
             'type': 'input',
             'name': 'draw_diameter',
             'message': 'Draw diameter:',
-            'filter': lambda val: int(val),
+            'when': lambda x: map_root is None,
             'validate': validate_diameter
         },
     ]
@@ -362,11 +370,11 @@ def select_project(project_locator: WorldBuilderProjectDirectory) -> WorldBuilde
 def select_map_root(project: WorldBuilderProject) -> MapRoot:
     # Map root selection
     map_root_dict: dict[str, MapRoot] = project.get_map_root_dict()
-    answer: dict = prompt(get_map_root_questions_list([m.value for m in MapRootOptions if m != MapRootOptions.OPEN_MAP_ROOT or bool(map_root_dict)]))
+    answer: dict = prompt(get_map_root_questions_list([m.value for m in ProjectViewOptions if m != ProjectViewOptions.OPEN_MAP_ROOT or bool(map_root_dict)]))
     map_root: MapRoot
     if not answer or answer[PromptOptions.USER_OPTION] == BackNavigations.BACK:
         raise BackDirectiveException()
-    elif answer[PromptOptions.USER_OPTION] == MapRootOptions.NEW_MAP_ROOT:
+    elif answer[PromptOptions.USER_OPTION] == ProjectViewOptions.NEW_MAP_ROOT:
         answer_new = prompt(get_new_map_name_and_diameter_questions_list(map_root_dict.keys()))
         if not answer_new:
             raise BackDirectiveException()
@@ -377,16 +385,24 @@ def select_map_root(project: WorldBuilderProject) -> MapRoot:
                             description=answer_new["description"],
                             width=answer_new['width'],
                             height=answer_new['height']))
-    elif answer[PromptOptions.USER_OPTION] == MapRootOptions.OPEN_MAP_ROOT:
+    elif answer[PromptOptions.USER_OPTION] in [ProjectViewOptions.RENAME_MAP, ProjectViewOptions.CLONE_MAP]:
+        answer_select: dict = prompt(get_open_map_questions_list(list(map_root_dict.keys())))
+        if not answer_select or answer_select[PromptOptions.USER_OPTION] == BackNavigations.BACK:
+            return
+        answer_name: dict = prompt(get_new_map_name_and_diameter_questions_list(map_root_dict.keys(), map_root=map_root_dict[answer_select[PromptOptions.USER_OPTION]]))
+        if answer[PromptOptions.USER_OPTION] == ProjectViewOptions.RENAME_MAP:
+            project.rename_map(answer_select[PromptOptions.USER_OPTION], answer_name['name'])
+        else:
+            project.clone_map(answer_select[PromptOptions.USER_OPTION], answer_name['name'])
+        return
+    elif answer[PromptOptions.USER_OPTION] == ProjectViewOptions.OPEN_MAP_ROOT:
         answer_open: dict = prompt(get_open_map_questions_list(list(map_root_dict.keys())))
         if not answer_open or answer_open[PromptOptions.USER_OPTION] == BackNavigations.BACK:
-            raise BackDirectiveException()
+            return
         map_root_name: str = answer_open[PromptOptions.USER_OPTION]
         map_root: MapRoot = map_root_dict[map_root_name]
     else:
         raise ValueError(f"Invalid map root option: {answer[PromptOptions.USER_OPTION]}")
-
-    print(f"Map {map_root.data.name} opened.")
 
     while not map_root.has_asset():
         answer: dict = prompt(get_map_asset_questions_list(project.resource_location))
@@ -395,6 +411,8 @@ def select_map_root(project: WorldBuilderProject) -> MapRoot:
             map_root.add_asset_map_from_template(answer_select_asset[PromptOptions.USER_OPTION])
         elif answer[PromptOptions.USER_OPTION] == "Check asset" and not map_root.has_asset():
             print("No asset found.")
+
+    print(f"Map {map_root.data.name} opened.")
 
     return map_root
 
@@ -421,6 +439,9 @@ def edited_prompt(prompt_str: str):
 
 
 def edit_prompt(map_root: MapRoot, cell_identifier: str):
+    if map_root.data.readonly:
+        print_burgandy("Map is readonly.  Cannot edit prompt.")
+        return
     print("Editing prompt")
     #with tempfile.NamedTemporaryFile(suffix=".txt", mode="w") as temp_file:
     #    temp_file.write(get_cell_prompt(map_root, cell_identifier))
@@ -430,7 +451,10 @@ def edit_prompt(map_root: MapRoot, cell_identifier: str):
     set_cell_prompt(map_root, cell_identifier, prompt)
 
 async def generate_child_matrix(map_root: MapRoot, cell_identifier: str):
-    print("Generating child matrix")
+    if map_root.data.readonly:
+        print_burgandy("Map is readonly.  Cannot generate child matrix.")
+        return
+    print(f"Generating child matrix for cell {cell_identifier}.")
     map_rect: MapRect = map_root.tree.get_sparse_node_from_cell_identifier(cell_identifier).rect
     messages: list[Message] = get_description_matrix_context_messages(map_root, map_rect)
     map_rect_data_type: Type[DescriptionMatrixData|MapMatrixData] = map_root.tree.get_map_rect_data_type(map_rect)
@@ -444,11 +468,45 @@ async def generate_child_matrix(map_root: MapRoot, cell_identifier: str):
         raise ValueError(f"Invalid map_rect_data_type: {map_rect_data_type}")
     map_root.tree.get_or_create_data_node(data)
 
+def get_toggle_readonly_questions_list(default_value: bool) -> list[dict]:
+    return [
+        {
+            'type': 'confirm',
+            'message': 'Set readonly value. If true, matrix creation and editing is disabled.',
+            'name': 'readonly',
+            'default': default_value,
+        },
+    ]
+
+def clone_map_questions_list() -> list[dict]:
+    return [
+        {
+            'type': 'input',
+            'name': 'name',
+            'message': 'Map name:',
+            'validate': lambda text: len(text) > 0
+        },
+    ]
+
 
 async def generate_recursive_matrices(map_root: MapRoot, cell_identifier: str):
-        map_rect: MapRect = map_root.tree.get_sparse_node_from_cell_identifier(cell_identifier).rect
+    if map_root.data.readonly:
+        print_burgandy("Map is readonly.  Cannot generate recursive matrices.")
+        return
 
+    if not get_cell_prompt(map_root, cell_identifier):
+        raise ValueError(f"Cell {cell_identifier} has no prompt.")
 
+    for sparse_node in map_root.tree.walk_tree(root_map_rect=map_root.tree.get_sparse_node_from_cell_identifier(cell_identifier).rect):
+        if sparse_node.has_data():
+            tiles: np.array = np.array(sparse_node.data.tiles)
+            if np.all(np.array(sparse_node.data.tiles) == "") or np.all(np.array(sparse_node.data.tiles) == 0) \
+                    or tiles.shape != (map_root.data.draw_diameter, map_root.data.draw_diameter):
+                await generate_child_matrix(map_root, sparse_node.cell_identifier)
+                #print(f"Want to generate child matrix for cell {sparse_node.cell_identifier}.")
+        else:
+            #print(f"Want to generate child matrix for cell {sparse_node.cell_identifier}.")
+            await generate_child_matrix(map_root, sparse_node.cell_identifier)
 
 def view_context_chain(map_root: MapRoot, cell_identifier: str):
     map_rect: MapRect = map_root.tree.get_sparse_node_from_cell_identifier(cell_identifier).rect
@@ -472,10 +530,23 @@ def format_human_readable_cell_description(map_root: MapRoot, cell_identifier: s
         header += f"\nParent Cell Identifier: {map_root.tree.hierarchy.get_map_rect_cell_identifier(map_root.tree.hierarchy.get_parent_rect(map_rect))}"
     return header
 
+def confirm_prompt(message: str) -> bool:
+    answer: dict = prompt([
+        {
+            'type': 'confirm',
+            'message': message,
+            'name': 'confirm',
+            'default': False,
+        },
+    ])
+    return answer['confirm']
+
+
 async def interact_with_cell(map_root: MapRoot, cell_identifier: str) -> tuple[Views, str]:
     header: str = format_human_readable_cell_description(map_root, cell_identifier)
     print_burgandy(header)
     answer: dict = prompt(get_cell_interface_questions_list("Select option", [m.value for m in CellOptions]))
+    map_rect: MapRect = map_root.tree.get_sparse_node_from_cell_identifier(cell_identifier).rect
     if not answer or answer == BackNavigations.BACK:
         raise BackDirectiveException()
     elif answer[PromptOptions.USER_OPTION] == CellOptions.VIEW_PROMPT:
@@ -486,6 +557,8 @@ async def interact_with_cell(map_root: MapRoot, cell_identifier: str) -> tuple[V
         view_matrix(map_root, cell_identifier)
     elif answer[PromptOptions.USER_OPTION] == CellOptions.GENERATE_CHILD_MATRIX:
         await generate_child_matrix(map_root, cell_identifier)
+    elif answer[PromptOptions.USER_OPTION] == CellOptions.GENERATE_RECURSIVE_MATRICES:
+        await generate_recursive_matrices(map_root, cell_identifier)
     elif answer[PromptOptions.USER_OPTION] == CellOptions.VIEW_CONTEXT_CHAIN:
         view_context_chain(map_root, cell_identifier)
     elif answer[PromptOptions.USER_OPTION] == CellOptions.GOTO_CELL:
@@ -494,6 +567,14 @@ async def interact_with_cell(map_root: MapRoot, cell_identifier: str) -> tuple[V
         raise BackDirectiveException()
     elif answer[PromptOptions.USER_OPTION] == CellOptions.VIEW_PROJECTED_IMAGE:
         view_projected_image(map_root, cell_identifier)
+    elif answer[PromptOptions.USER_OPTION] == CellOptions.VIEW_LEVEL_COUNTS:
+        pydoc.pager(pprint.pformat(map_root.tree.get_level_counts(map_rect)))
+    elif answer[PromptOptions.USER_OPTION] == CellOptions.DELETE_SUBTREE:
+        if map_root.data.readonly:
+            print_burgandy("Map is readonly.  Cannot delete subtree.")
+            return
+        if confirm_prompt("Are you sure you want to delete the subtree?"):
+            map_root.tree.delete_subtree(map_rect)
     else:
         raise ValueError(f"Invalid cell option: {answer[PromptOptions.USER_OPTION]}")
 
@@ -504,8 +585,17 @@ async def interact_with_cell(map_root: MapRoot, cell_identifier: str) -> tuple[V
 #    SELECT_TILE_ASSETS = "Select asset"
 #    LIST_TILE_ASSETS = "List asset tiles"
 
+def format_human_readable_map_description(map_root: MapRoot) -> str:
+    header: str = f"Map: {map_root.data.name}\n{'-' * len('Map: ' + map_root.data.name)}"
+    header += f"\nDraw Diameter: {map_root.data.draw_diameter}"
+    header += f"\nWidth: {map_root.data.width} Height: {map_root.data.height}"
+    header += f"\nReadonly: {map_root.data.readonly}"
+    return header
 
 def interact_with_map_root(map_root: MapRoot) -> str:
+    header: str = format_human_readable_map_description(map_root)
+    print_burgandy(header)
+
     answer: dict = prompt(get_map_options_questions_list([m.value for m in MapOptions]))
     if not answer or answer[PromptOptions.USER_OPTION] == BackNavigations.BACK:
         raise BackDirectiveException()
@@ -516,6 +606,13 @@ def interact_with_map_root(map_root: MapRoot) -> str:
         if not cell_answer or cell_answer[PromptOptions.USER_OPTION] == BackNavigations.BACK:
             raise BackDirectiveException()
         return cell_answer[PromptOptions.USER_OPTION]
+    elif answer[PromptOptions.USER_OPTION] == MapOptions.READONLY:
+        map_root.set_readonly_state(
+                prompt(
+                        get_toggle_readonly_questions_list(map_root.data.readonly)
+                )["readonly"]
+        )
+        return
     elif answer[PromptOptions.USER_OPTION] == MapOptions.LIST_TILE_ASSETS:
         pydoc.pager(get_gid_description_context_string(map_root.get_tiled_map()))
     elif answer[PromptOptions.USER_OPTION] == MapOptions.VIEW_IMAGE:
@@ -607,11 +704,12 @@ class CLIController():
 
     async def _interact(self):
         if self._view_chain[-1] == Views.LANDING:
-            self._project = select_project(self._project_locator)
             self.append_view(Views.PROJECT)
+            self._project = select_project(self._project_locator)
         elif self._view_chain[-1] == Views.PROJECT:
             self._map_root = select_map_root(self._project)
-            self.append_view(Views.MAP)
+            if self._map_root is not None:
+                self.append_view(Views.MAP)
         elif self._view_chain[-1] == Views.MAP:
             cell_identifier: str = interact_with_map_root(self._map_root)
             if cell_identifier is not None:

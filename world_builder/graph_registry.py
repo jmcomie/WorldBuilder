@@ -57,6 +57,7 @@ class MapRootData(BaseModel):
     height: int
     draw_diameter: DrawDiameterInt
     description: Optional[str] = None
+    readonly: Optional[bool] = False
 
 @GraphRegistry.node_type(WorldBuilderNodeType.MAP_MATRIX)
 class MapMatrixData(MapRectMetadata):

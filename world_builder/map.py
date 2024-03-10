@@ -47,6 +47,12 @@ def extract_2d_array_subset(arr: np.ndarray, x_y_coords: tuple[int, int], diamet
     output[overlap_start_x:overlap_end_x, overlap_start_y:overlap_end_y] = arr[max(start_x, 0):min(end_x, arr.shape[0]), max(start_y, 0): min(end_y, arr.shape[1])]
     return output
 
+
+class TreeLevelCount(BaseModel):
+    level: int
+    has_data: int
+    total: int
+
 # have list rects produce a matrix
 
 class MapHierarchy(object):
@@ -155,9 +161,7 @@ class MapHierarchy(object):
         Breadth first tree iteration.
         """
         if map_rect is None:
-            root_level_rects: list[MapRect] = self.get_level_coordinates_rect((0, 0), 0)
-            assert len(root_level_rects) == 1
-            map_rect = root_level_rects[0]
+            map_rect: MapRect = self.get_level_coordinates_rect((0, 0), 0)
         def get_child_rects(parent_rect: MapRect) -> Iterator[MapRect]:
             if self.get_tree_height() - 1 > self.get_rect_level(parent_rect):
                 for rect in self.get_rect_child_matrix(parent_rect).flatten():
@@ -234,26 +238,26 @@ class SparseMapTree:
         assert isinstance(self._map_root_node.data, MapRootData)
         self._rect_data_node_dict: Optional[dict[tuple, Node]] = None
 
-    def list_data_for_processing(self,
-                                  skip_non_empty: bool = False,
-                                  parent_node: Optional[Node] = None,
-                                  commit_changes: bool = False) -> Iterator[Union[MapMatrixData, DescriptionMatrixData]]:
-        self.ensure_rect_node_dict()
-        for sparse_node in self.walk_tree(root_node=parent_node):
-            if sparse_node.has_data() and skip_non_empty:
-                continue
-            if not sparse_node.has_data():
-                print(sparse_node.rect)
-                sparse_node.node = self.get_or_create_data_node(self._get_empty_model_instance(sparse_node.rect))
-            assert isinstance(sparse_node.node.data, (MapMatrixData, DescriptionMatrixData))
-            data: Union[MapMatrixData, DescriptionMatrixData] = sparse_node.node.data
-            yield data
-            if commit_changes and data.model_dump() != sparse_node.node.data.model_dump():
-                self.check_data(sparse_node.node.data)
-                sparse_node.node.data = data
-                self._rect_data_node_dict[sparse_node.node.data.map_rect.to_tuple()] = sparse_node.node
-                sparse_node.node.save()
-                sparse_node.node.session.commit()
+    #def list_data_for_processing(self,
+    #                              skip_non_empty: bool = False,
+    #                              parent_node: Optional[Node] = None,
+    #                              commit_changes: bool = False) -> Iterator[Union[MapMatrixData, DescriptionMatrixData]]:
+    #    self.ensure_rect_node_dict()
+    #    for sparse_node in self.walk_tree(root_node=parent_node):
+    #        if sparse_node.has_data() and skip_non_empty:
+    #            continue
+    #        if not sparse_node.has_data():
+    #            print(sparse_node.rect)
+    #            sparse_node.node = self.get_or_create_data_node(self._get_empty_model_instance(sparse_node.rect))
+    #        assert isinstance(sparse_node.node.data, (MapMatrixData, DescriptionMatrixData))
+    #        data: Union[MapMatrixData, DescriptionMatrixData] = sparse_node.node.data
+    #        yield data
+    #        if commit_changes and data.model_dump() != sparse_node.node.data.model_dump():
+    #            self.check_data(sparse_node.node.data)
+    #            sparse_node.node.data = data
+    #            self._rect_data_node_dict[sparse_node.node.data.map_rect.to_tuple()] = sparse_node.node
+    #            sparse_node.node.save()
+    #            sparse_node.node.session.commit()
 
     @property
     def root_node(self) -> Node:
@@ -360,19 +364,52 @@ class SparseMapTree:
         for rect in self._map_hierarchy.get_rect_child_matrix(parent_node.data.map_rect).flatten():
             yield SparseMapNode(rect, data_node=self.get_data_node(rect), cell_identifier=self._map_hierarchy.get_map_rect_cell_identifier(rect))
 
-    def walk_tree(self, root_node: Optional[Node] = None) -> Iterator[SparseMapNode]:
+    def walk_tree(self, root_map_rect: Optional[MapRect] = None) -> Iterator[SparseMapNode]:
         """
         Breadth first sparse iteration. Yields SparseMapNode for each entry in tree
         including root. If data node in tree exists for sparse node it is available, 
         """
-        if root_node is None or root_node.id == self._map_root_node.id:
-            root_node_rect = self._map_hierarchy.get_level_coordinates_rect((0, 0), 0)
-        else:
-            assert isinstance(root_node.data, MapRectMetadata)
-            root_node_rect = root_node.data.map_rect
-        for rect in self._map_hierarchy.walk_rects(root_node_rect):
+        if root_map_rect is None:
+            root_map_rect = self._map_hierarchy.get_rect_matrix(0).flatten()[0]
+        for rect in self._map_hierarchy.walk_rects(root_map_rect):
             yield SparseMapNode(rect, self.get_data_node(rect), self._map_hierarchy.get_map_rect_cell_identifier(rect))
  
+    def delete_subtree(self, map_rect: MapRect):
+        self.ensure_rect_node_dict()
+        #for map_rect in self.hierarchy.walk_rects(map_rect):
+        depth_first_rects: list[MapRect] = sorted(list(self.hierarchy.walk_rects(map_rect)),
+                key=lambda x: self.hierarchy.get_rect_level(x), reverse=True)
+        node: Optional[Node] = None
+        for map_rect in depth_first_rects[:-1]:
+            node = self.get_data_node(map_rect)
+            if node is None:
+                continue
+            node.delete()
+
+        self._map_root_node.session.commit()
+        self.ensure_rect_node_dict(reload=True)
+
+    def get_level_counts(self, root_map_rect: Optional[MapRect] = None) -> list[TreeLevelCount]:
+        if root_map_rect is None:
+            root_map_rect = self._map_hierarchy.get_rect_matrix(0).flatten()[0]
+        current_tree_level_counts: TreeLevelCount = TreeLevelCount(level=self.hierarchy.get_rect_level(root_map_rect), has_data=0, total=0)
+        tree_level_counts: list[TreeLevelCount] = []
+        for node in self.walk_tree(root_map_rect):
+            if self.hierarchy.get_rect_level(node.rect) != current_tree_level_counts.level:
+                assert self.hierarchy.get_rect_level(node.rect) == current_tree_level_counts.level + 1
+                tree_level_counts.append(current_tree_level_counts)
+                current_tree_level_counts = TreeLevelCount(level=self.hierarchy.get_rect_level(node.rect), has_data=0, total=0)
+            current_tree_level_counts.total += 1
+            # Below check should check shape of tiles, not if it has data.
+            if node.has_data() and \
+                    not np.all(np.array(node.data.tiles) == "") and \
+                    not np.all(np.array(node.data.tiles) == 0) and \
+                    not len(node.data.tiles) == 0:
+                current_tree_level_counts.has_data += 1
+        tree_level_counts.append(current_tree_level_counts)
+        return tree_level_counts
+
+
     def ensure_rect_node_dict(self, reload: bool = False):
         if self._rect_data_node_dict is not None and not reload:
             return
@@ -414,9 +451,22 @@ class MapRoot:
     def data(self) -> MapRootData:
         return self._storage_node.data
 
+    @data.setter
+    def data(self, data: MapRootData):
+        self._storage_node.data = data
+
     @property
     def tree(self) -> SparseMapTree:
         return self._tree
+
+    def set_readonly_state(self, value: bool) -> None:
+        data: MapRootData = self._storage_node.data
+        if data.readonly == value:
+            return
+        data.readonly = value
+        self._storage_node.data = data
+        self._storage_node.save()
+        self._storage_node.session.commit()
 
     # Methods below are related to Asset Management
     def get_image_buffer_from_tile_matrix(self, tile_matrix: list[list[int]]) -> Any:

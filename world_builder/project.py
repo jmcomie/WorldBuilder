@@ -110,3 +110,27 @@ class WorldBuilderProject:
         map_root: MapRoot = MapRoot(self._storage_node.create_child(map_root_data), self._resource_location)
         self._storage_node.session.commit()
         return map_root
+
+    def rename_map(self, from_name, to_name):
+        map_root = self.get_map_root(from_name)
+        if map_root is None:
+            raise Exception(f"Map root with name {from_name} does not exist.")
+        data = map_root.data
+        data.name = to_name
+        map_root.data = data
+        self._storage_node.save()
+        self._storage_node.session.commit()
+
+    def clone_map(self, from_name, to_name) -> MapRoot:
+        map_root = self.get_map_root(from_name)
+        if map_root is None:
+            raise ValueError(f"Map root with name {from_name} does not exist.")
+        if self.get_map_root(to_name) is not None:
+            raise ValueError(f"Map root with name {to_name} already exists.")
+        data = map_root.data.model_copy()
+        data.name = to_name
+        new_map_root: MapRoot = self.new_map_root(data)
+        for sparse_node in map_root.tree.walk_tree():
+            if sparse_node.has_data():
+                new_map_root.tree.get_or_create_data_node(sparse_node.data.model_copy())
+        return new_map_root
