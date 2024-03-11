@@ -35,6 +35,7 @@ class MapRect(BaseModel):
         # Include type as string, layer, and rect.
         return (self.x, self.y, self.width, self.height, self.layer, str(type(self)))
 
+
 class MapRectMetadata(BaseModel):
     map_rect: Optional[MapRect] = None
 
@@ -58,6 +59,7 @@ class MapRootData(BaseModel):
     draw_diameter: DrawDiameterInt
     description: Optional[str] = None
     readonly: Optional[bool] = False
+
 
 @GraphRegistry.node_type(WorldBuilderNodeType.MAP_MATRIX)
 class MapMatrixData(MapRectMetadata):

@@ -23,19 +23,19 @@ collections.Mapping = collections.abc.Mapping
 
 import collections.abc
 from gstk.llmlib.object_generation import get_chat_completion_object_response
-from gstk.models.chatgpt import Message, Role
+from gstk.models.chatgpt import Message
 from gstk.graph.graph import Node, get_project, new_project
 
 #from gstk.creation.graph_registry import Message, Role
 
 #from gstk.creation.group import get_chat_completion_object_response
 
-from gstk.graph.registry import GraphRegistry, NodeTypeData, ProjectProperties
-from world_builder.graph_registry import DrawDiameterInt, MapRootData, WorldBuilderNodeType, MapRect, MapMatrixData, DescriptionMatrixData
+from gstk.graph.registry import GraphRegistry, ProjectProperties
+from world_builder.graph_registry import DrawDiameterInt, MapRootData, MapRect, MapMatrixData, DescriptionMatrixData
 from world_builder.table import Table
 from world_builder.context import get_description_matrix_context_messages
 from world_builder.project import MapRoot, WorldBuilderProject, WorldBuilderProjectDirectory
-from world_builder.map import MAP_METADATA_DIRNAME, MapHierarchy, MapRootData, MapRoot, SparseMapNode, SparseMapTree, CELL_IDENTIFER_RE, ROOT_CELL_IDENTIFIER, get_cell_prompt, set_cell_prompt
+from world_builder.map import MAP_METADATA_DIRNAME, MapHierarchy, MapRootData, MapRoot, SparseMapNode, CELL_IDENTIFER_RE, ROOT_CELL_IDENTIFIER, get_cell_prompt, set_cell_prompt
 from world_builder.map_data_interface import get_gid_description_context_string, get_image_from_tile_matrix
 from PyInquirer import prompt
 from prompt_toolkit.validation import Validator, ValidationError
@@ -78,7 +78,7 @@ class CellOptions(StrEnum):
 class MapOptions(StrEnum):
     GOTO_ROOT_CELL = "Goto Root Cell"
     GOTO_CELL = "Goto Cell"
-    LIST_TILE_ASSETS = "List asset tiles"
+    LIST_TILE_ASSETS = "List Asset Tiles"
     VIEW_IMAGE = "View Image"
     READONLY = "Set Readonly"
 
@@ -259,6 +259,7 @@ def get_new_map_name_and_diameter_questions_list(existing_map_names: list[str], 
             'type': 'input',
             'name': 'draw_diameter',
             'message': 'Draw diameter:',
+            'filter': lambda val: int(val),
             'when': lambda x: map_root is None,
             'validate': validate_diameter
         },
@@ -269,12 +270,15 @@ def get_validate_width_and_height_fn(draw_diameter: int):
     def validate_width_and_height(text: str):
         if text == BACK_DIRECTIVE_INVOCATION_STRING:
             raise BackDirectiveException()
-        if int(text) % draw_diameter != 0:
+        if int(text) % int(draw_diameter) != 0:
             raise ValidationError(message=f"Width and height must be a multiple of {draw_diameter}.",
                                   cursor_position=len(text))
         return True
     return validate_width_and_height
 
+class AssetSelectionOptions(StrEnum):
+    SELECT_ASSET = "Select Asset"
+    CHECK_ASSET = "Check Asset"
 
 def get_map_asset_questions_list(project_resource_location: Path) -> list[dict]:
     return [
@@ -282,7 +286,7 @@ def get_map_asset_questions_list(project_resource_location: Path) -> list[dict]:
             'type': 'list',
             'name': 'user_option',
             'message': 'Asset selection.',
-            'choices': ['Select asset', 'Check asset']
+            'choices': [AssetSelectionOptions.SELECT_ASSET, AssetSelectionOptions.CHECK_ASSET]
         }
     ]
 
@@ -347,6 +351,7 @@ def select_project(project_locator: WorldBuilderProjectDirectory) -> WorldBuilde
         raise ExitDirectiveException()
     elif answer[PromptOptions.USER_OPTION] == ProjectOptions.NEW_PROJECT:
         answer_new: dict = prompt(get_new_project_questions_list(get_validate_new_project_id_fn(project_locator)))
+        project_id: str = answer_new['project_id']
         project_properties: ProjectProperties = ProjectProperties(
             id=answer_new['project_id'],
             name=answer_new['project_name'],
@@ -364,7 +369,7 @@ def select_project(project_locator: WorldBuilderProjectDirectory) -> WorldBuilde
         raise ValueError(f"Invalid mode option: {answer[PromptOptions.USER_OPTION]}")
 
     print(f"Project {project_node.data.id} opened.")
-    return WorldBuilderProject(project_node, project_locator.get_project_resource_location(project_node.data.id))
+    return WorldBuilderProject(project_node, project_locator.get_project_resource_location(project_id))
 
 
 def select_map_root(project: WorldBuilderProject) -> MapRoot:
@@ -406,10 +411,10 @@ def select_map_root(project: WorldBuilderProject) -> MapRoot:
 
     while not map_root.has_asset():
         answer: dict = prompt(get_map_asset_questions_list(project.resource_location))
-        if answer[PromptOptions.USER_OPTION] == "Select asset":
+        if answer[PromptOptions.USER_OPTION] == AssetSelectionOptions.SELECT_ASSET:
             answer_select_asset: dict = prompt(get_asset_selection_questions_list(map_root))
             map_root.add_asset_map_from_template(answer_select_asset[PromptOptions.USER_OPTION])
-        elif answer[PromptOptions.USER_OPTION] == "Check asset" and not map_root.has_asset():
+        elif answer[PromptOptions.USER_OPTION] == AssetSelectionOptions.CHECK_ASSET and not map_root.has_asset():
             print("No asset found.")
 
     print(f"Map {map_root.data.name} opened.")
@@ -632,7 +637,7 @@ def view_matrix(map_root: MapRoot, cell: str):
             hierarchy: MapHierarchy = map_root.tree.hierarchy
             rect_child_matrix: np.array = hierarchy.get_rect_child_matrix(sparse_node.rect)
             arr = np.array(data.tiles)
-            assert rect_child_matrix.shape == arr.shape
+            assert rect_child_matrix.shape == arr.shape, f"{rect_child_matrix.shape} {arr.shape}, arr: {arr}"
             for y,x in product(range(arr.shape[0]), range(arr.shape[1])):
                 cell_identifier = hierarchy.get_map_rect_cell_identifier(rect_child_matrix[y,x])
                 arr[y,x] = f"{cell_identifier}: {str(arr[y,x])}"

@@ -33,7 +33,7 @@ The root prompt is a description of the entire map. It is the first prompt in th
 
 You are assisting in the creation of an {map_root.data.width}x{map_root.data.height} tile map.  To better utilize your internal semantic vector space, rather than being asked to create the {map_root.data.width}x{map_root.data.height} tile map in one go, you will create a {map_root.data.draw_diameter}x{map_root.data.draw_diameter} prompt matrix that divides the entire map into 9 cells. Each cell is to contain a prompt describing its corresponding projected area on the map, with a linguistic complexity appropriate to the map description. From there, you will create a {map_root.data.draw_diameter}x{map_root.data.draw_diameter} prompt matrix representing the areas below each of the 9 initial cells, and so on, until you have created the {map_root.data.width}x{map_root.data.height} tile map.  Note that, accordingly, each level of the map contains nine times more total cells than the level above it, and each cell corresponds to nine times less area of the tile map than the cells in the level above it.
 
-To assist in your creation of the map via these matrices, you are provided the following context: the overall map description, each recursive parent prompt above the matrix being created, and the position of each recursive parent prompt in the {map_root.data.draw_diameter}x{map_root.data.draw_diameter} matrix in which it was created. For example, a map root description of a circle of trees spanning the entire map might have in position 1,1 of its initial prompt matrix a directive for creating the left middle of the circle of trees (approximating one eighth the arc of the circle), and in position 3,3 of its initial prompt matrix a directive for creating the bottom right of the circle of trees, and so on. The recursive parent prompts are provided to help you maintain consistency with the map description as you create the {map_root.data.draw_diameter}x{map_root.data.draw_diameter} prompt matrices.
+To assist in your creation of the map via these matrices, you are provided the following context: the overall map description, each recursive parent prompt above the matrix being created, and the position of each recursive parent prompt in the {map_root.data.draw_diameter}x{map_root.data.draw_diameter} matrix in which it was created. For example, a map root description of a circle of trees spanning the entire map might have in y,x position {map_root.data.draw_diameter // 2 },0 of its initial prompt matrix a directive for creating the left middle of the circle of trees, and in position 6,6 of its initial prompt matrix a directive for creating the bottom right of the circle of trees, and so on. The recursive parent prompts are provided to help you maintain consistency with the map description as you create the {map_root.data.draw_diameter}x{map_root.data.draw_diameter} prompt matrices.
 
 The following illustrates the structure of the parent context provided to you and highlights the recursive nature of the prompts and their increasing specificity with respect to tile map area:
 
@@ -57,6 +57,8 @@ Map description: A description of the entire map.
 #     print(f"""You are creating a 2D tilemap for a 2D game represented as integers in a CSV.
 # Create a 3x3 matrix in which each cell is one of the gid integers below, and that adheres to description.
 #
+        
+
 
     depth_descriptions: list[str] = []
     if depth > 0:
@@ -121,7 +123,7 @@ def get_cell_prompt_with_context(map_root: MapRoot, map_rect: MapRect) -> Messag
             print(f"Parent level: {parent_level}")
             assert parent_level != level and parent_level < level
             coords_in_parent = map_root.tree.hierarchy.get_coordinates_in_parent(node.data.map_rect)
-            parent_context.insert(0, f"{LEVEL_LABEL_MAP[parent_level][0].upper() + LEVEL_LABEL_MAP[parent_level][1:]} level prompt: {np.array(parent.data.tiles)[*coords_in_parent]}")
+            parent_context.insert(0, f"{LEVEL_LABEL_MAP[parent_level][0].upper() + LEVEL_LABEL_MAP[parent_level][1:]} level prompt [y,x coords in parent: {coords_in_parent[1], coords_in_parent[0]}]: {np.array(parent.data.tiles)[*coords_in_parent]}")
             node = parent
             parent = parent.parent
     assert parent is None or parent.node_type == WorldBuilderNodeType.MAP_ROOT
