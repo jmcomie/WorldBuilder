@@ -2,6 +2,7 @@ from enum import StrEnum
 from typing import Literal, Optional, get_args
 import gstk.creation.api
 import gstk.shim
+from openai import ChatCompletion
 from pydantic import BaseModel, Field, field_validator, root_validator
 
 from gstk.graph.registry import GraphRegistry
@@ -15,7 +16,7 @@ class WorldBuilderNodeType(StrEnum):
     MAP_MATRIX = "world_builder.map_matrix"
     DESCRIPTION_MATRIX = "world_builder.description_matrix"
     WORLD_BUILDER_ALL = "world_builder.*"
-
+    CHAT_COMPLETION = "world_builder.chat_completion"
 
 DrawDiameterInt = Literal[3, 4, 5, 6, 7, 8, 9, 10]
 
@@ -35,6 +36,10 @@ class MapRect(BaseModel):
         # Include type as string, layer, and rect.
         return (self.x, self.y, self.width, self.height, self.layer, str(type(self)))
 
+    @classmethod
+    def from_tuple(cls, tup):
+        # Include type as string, layer, and rect.
+        return cls(x=tup[0], y=tup[1], width=tup[2], height=tup[3], layer=tup[4])
 
 class MapRectMetadata(BaseModel):
     map_rect: Optional[MapRect] = None
@@ -49,6 +54,10 @@ class MapRectMetadata(BaseModel):
         extra = "forbid"
         use_enum_values = True
 
+
+@GraphRegistry.node_type(WorldBuilderNodeType.CHAT_COMPLETIONS)
+class ChatCompletionData(BaseModel):
+    chat_completions: dict[str, list[ChatCompletion]]
 
 @GraphRegistry.node_type(WorldBuilderNodeType.MAP_ROOT, child_types=[WorldBuilderNodeType.DESCRIPTION_MATRIX, WorldBuilderNodeType.MAP_MATRIX])
 class MapRootData(BaseModel):

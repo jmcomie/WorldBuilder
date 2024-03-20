@@ -409,12 +409,11 @@ class SparseMapTree:
         tree_level_counts.append(current_tree_level_counts)
         return tree_level_counts
 
-
     def ensure_rect_node_dict(self, reload: bool = False):
         if self._rect_data_node_dict is not None and not reload:
             return
         self._rect_data_node_dict = {}
-        for node in self._map_root_node.walk_tree():
+        for node in self._map_root_node.walk_tree(yield_node_types=[WorldBuilderNodeType.MAP_MATRIX, WorldBuilderNodeType.DESCRIPTION_MATRIX]):
             if isinstance(node.data, MapRootData):
                 continue
             assert isinstance(node.data, MapRectMetadata)

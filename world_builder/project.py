@@ -8,6 +8,7 @@ import sys
 from typing import Any, Iterator, Optional, Type
 from gstk.graph.project_locator import ProjectLocator
 
+from openai import ChatCompletion
 from pydantic import BaseModel
 import shutil
 from pytmx import TiledMap
@@ -15,7 +16,7 @@ import world_builder
 from gstk.graph.graph import Node, SystemEdgeType
 from gstk.creation.group import new_group, GroupProperties, CreationGroup
 
-from world_builder.graph_registry import MapRect, MapRootData, WorldBuilderNodeType
+from world_builder.graph_registry import ChatCompletionData, MapRect, MapRootData, WorldBuilderNodeType
 from world_builder.map import MapRoot
 from world_builder.map_data_interface import get_gid_tile_properties
 
@@ -82,7 +83,6 @@ class WorldBuilderProjectDirectory(ProjectLocator):
         return self.base_path / self.projects_directory_name / project_id
 
 
-
 class WorldBuilderProject:
     def __init__(self, node: Node, resource_location: Path):
         self._storage_node: Node = node
@@ -107,7 +107,9 @@ class WorldBuilderProject:
         print(f"type: {type(map_root_data)}")
         if map_root_data.name in self.get_map_root_dict():
             raise Exception(f"Map root with name {map_root_data.name} already exists.")
-        map_root: MapRoot = MapRoot(self._storage_node.create_child(map_root_data), self._resource_location)
+        node: Node = self._storage_node.create_child(map_root_data)
+        map_root: MapRoot = MapRoot(node, self._resource_location)
+        node.create_child(ChatCompletionData(chat_completions=dict()))
         self._storage_node.session.commit()
         return map_root
 
