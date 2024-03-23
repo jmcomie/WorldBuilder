@@ -4,6 +4,7 @@ This is beautiful code and it needs to be beautifully documented.
 from collections import deque
 from enum import Enum, StrEnum
 from itertools import product
+import json
 import math
 import os
 from pathlib import Path
@@ -11,6 +12,7 @@ import re
 import shutil
 from typing import Any, Callable, Iterator, Optional, Type, TypeVar, Union
 from gstk.graph.registry import GraphRegistry
+from openai import ChatCompletion
 from pydantic import BaseModel
 from pytmx import TiledMap, TiledTileset
 
@@ -61,8 +63,9 @@ class MapHierarchy(object):
         # Check that draw_diameter is a valid power of the width and height.
         # This is a complexity hedge and keeps the map traversal algorithm
         # and context selection rooted in fairly simple algebra.
-        if not math.log(self._map_root_data.width, self.draw_diameter).is_integer() or \
-                not math.log(self._map_root_data.height, self.draw_diameter).is_integer():
+        # round to address e.g. case where math.log(125, 5) is 3.0000000000000004
+        if not round(math.log(self._map_root_data.width, self.draw_diameter), 10).is_integer() or \
+                not round(math.log(self._map_root_data.height, self.draw_diameter), 10).is_integer():
             raise ValueError(f"Invalid map.")
 
     @property
@@ -71,11 +74,11 @@ class MapHierarchy(object):
 
     @property
     def global_row_count(self) -> int:
-        return self._map_root_data.height
+        return int(round(self._map_root_data.height))
 
     @property
     def global_column_count(self) -> int:
-        return self._map_root_data.width
+        return int(round(self._map_root_data.width))
 
     def get_tree_height(self) -> int:
         """
@@ -95,7 +98,7 @@ class MapHierarchy(object):
             raise ValueError(f"Invalid depth for map: {depth}")
         cur_width = self.global_column_count / (self.draw_diameter ** distance_from_leaf_level)
         cur_height = self.global_row_count / (self.draw_diameter ** distance_from_leaf_level)
-        return cur_height / self.draw_diameter, cur_width / self.draw_diameter
+        return float(round(cur_height / self.draw_diameter)), float(round(cur_width / self.draw_diameter))
  
     def get_rect_level(self, map_rect: MapRect) -> int:
         return int(int(math.log(max(self.global_column_count, self.global_row_count), self.draw_diameter)) - math.log(max(map_rect.width, map_rect.height), self.draw_diameter))
@@ -131,6 +134,7 @@ class MapHierarchy(object):
 
     def list_level_coordinates(self, depth: int) -> Iterator[tuple[int, int]]:
         row_count, column_count = self.get_shape_at_depth(depth)
+        print(row_count, column_count)
         if not row_count.is_integer() or not column_count.is_integer():
             raise ValueError(f"Invalid map.")
         return product(range(int(row_count)), range(int(column_count)))
@@ -313,6 +317,16 @@ class SparseMapTree:
             self._rect_data_node_dict[rect.to_tuple()] = new_node
             parent_rect_node = new_node
         return parent_rect_node
+
+    def add_chat_completion_for_map_rect(self, map_rect: MapRect, chat_completion: ChatCompletion):
+        data: MapRootData = self._map_root_node.data
+        key: str = json.dumps(map_rect.to_tuple())
+        if key not in data.map_rect_chat_completions:
+            data.map_rect_chat_completions[key] = []
+        data.map_rect_chat_completions[key].append(chat_completion)
+        self._map_root_node.data = data
+        self._map_root_node.save()
+        self._map_root_node.session.commit()
 
     def get_or_create_data_node(self, data: Union[MapMatrixData, DescriptionMatrixData]) -> Node:
         self.check_data(data)

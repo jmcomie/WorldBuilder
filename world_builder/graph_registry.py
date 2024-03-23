@@ -16,7 +16,6 @@ class WorldBuilderNodeType(StrEnum):
     MAP_MATRIX = "world_builder.map_matrix"
     DESCRIPTION_MATRIX = "world_builder.description_matrix"
     WORLD_BUILDER_ALL = "world_builder.*"
-    CHAT_COMPLETION = "world_builder.chat_completion"
 
 DrawDiameterInt = Literal[3, 4, 5, 6, 7, 8, 9, 10]
 
@@ -55,10 +54,6 @@ class MapRectMetadata(BaseModel):
         use_enum_values = True
 
 
-@GraphRegistry.node_type(WorldBuilderNodeType.CHAT_COMPLETIONS)
-class ChatCompletionData(BaseModel):
-    chat_completions: dict[str, list[ChatCompletion]]
-
 @GraphRegistry.node_type(WorldBuilderNodeType.MAP_ROOT, child_types=[WorldBuilderNodeType.DESCRIPTION_MATRIX, WorldBuilderNodeType.MAP_MATRIX])
 class MapRootData(BaseModel):
     name: str
@@ -68,7 +63,9 @@ class MapRootData(BaseModel):
     draw_diameter: DrawDiameterInt
     description: Optional[str] = None
     readonly: Optional[bool] = False
-
+    # Chat completion data key is the map rect as a string.
+    # The values are lists of chat completions used.
+    map_rect_chat_completions: dict[str, list[dict]] = Field(default_factory=dict, description="Chat completions for each map rect.")
 
 @GraphRegistry.node_type(WorldBuilderNodeType.MAP_MATRIX)
 class MapMatrixData(MapRectMetadata):

@@ -1,5 +1,7 @@
 import asyncio
+from functools import reduce
 from itertools import product
+import operator
 import devtools
 from enum import Enum, StrEnum
 from pathlib import Path
@@ -13,17 +15,18 @@ import readline
 import rlcompleter
 
 
-# START Monkey patch.
-import collections
-
 import numpy as np
 from pydantic import BaseModel
+
+
+# START Monkey patch.
+import collections
 collections.Mapping = collections.abc.Mapping
 # END Monkey patch.
 
 import collections.abc
 from gstk.llmlib.object_generation import get_chat_completion_object_response
-from gstk.models.chatgpt import Message
+from gstk.models.chatgpt import Message, TokenCosts, get_chat_completions_cost
 from gstk.graph.graph import Node, get_project, new_project
 
 #from gstk.creation.graph_registry import Message, Role
@@ -61,6 +64,7 @@ class ProjectViewOptions(StrEnum):
     OPEN_MAP_ROOT = "Open map"
     RENAME_MAP = "Rename Map"
     CLONE_MAP = "Clone Map"
+    DELETE_MAP = "Delete Map"
 
 
 class CellOptions(StrEnum):
@@ -81,7 +85,8 @@ class MapOptions(StrEnum):
     LIST_TILE_ASSETS = "List Asset Tiles"
     VIEW_IMAGE = "View Image"
     READONLY = "Set Readonly"
-
+    VIEW_CHAT_COMPLETIONS = "View Chat Completions"
+    VIEW_COSTS = "View Costs"
 
 class BackNavigations(StrEnum):
     BACK = "Back"
@@ -400,6 +405,12 @@ def select_map_root(project: WorldBuilderProject) -> MapRoot:
         else:
             project.clone_map(answer_select[PromptOptions.USER_OPTION], answer_name['name'])
         return
+    elif answer[PromptOptions.USER_OPTION] == ProjectViewOptions.DELETE_MAP:
+        answer_select: dict = prompt(get_open_map_questions_list(list(map_root_dict.keys())))
+        if not answer_select or answer_select[PromptOptions.USER_OPTION] == BackNavigations.BACK:
+            return
+        project.delete_map(answer_select[PromptOptions.USER_OPTION])
+        return
     elif answer[PromptOptions.USER_OPTION] == ProjectViewOptions.OPEN_MAP_ROOT:
         answer_open: dict = prompt(get_open_map_questions_list(list(map_root_dict.keys())))
         if not answer_open or answer_open[PromptOptions.USER_OPTION] == BackNavigations.BACK:
@@ -424,6 +435,15 @@ def select_map_root(project: WorldBuilderProject) -> MapRoot:
 
 def view_prompt(map_root: MapRoot, cell_identifier: str):
     pydoc.pager(get_cell_prompt(map_root, cell_identifier))
+
+def view_chat_completions(map_root: MapRoot):
+    assert isinstance(map_root.data, MapRootData)
+    if not map_root.data.map_rect_chat_completions:
+        print_burgandy("No chat completions found.")
+    for map_rect_str, chat_completion_list in map_root.data.map_rect_chat_completions.items():
+        print(f"Map rect: {map_rect_str}")
+        for chat_completion in chat_completion_list:
+            pprint.pprint(chat_completion)
 
 def edited_prompt(prompt_str: str):
     questions = [
@@ -464,14 +484,17 @@ async def generate_child_matrix(map_root: MapRoot, cell_identifier: str):
     messages: list[Message] = get_description_matrix_context_messages(map_root, map_rect)
     map_rect_data_type: Type[DescriptionMatrixData|MapMatrixData] = map_root.tree.get_map_rect_data_type(map_rect)
     if map_rect_data_type == MapMatrixData:
-        res: list = await get_chat_completion_object_response(list(GraphRegistry.get_node_types(MapMatrixData))[0], messages)
-        data: MapMatrixData = MapMatrixData(map_rect=map_rect, tiles=res.tiles)
+        response, chat_completion = await get_chat_completion_object_response(list(GraphRegistry.get_node_types(MapMatrixData))[0], messages)
+        data: MapMatrixData = MapMatrixData(map_rect=map_rect, tiles=response.tiles)
     elif map_rect_data_type == DescriptionMatrixData:
-        res: list = await get_chat_completion_object_response(list(GraphRegistry.get_node_types(DescriptionMatrixData))[0], messages)
-        data: DescriptionMatrixData = DescriptionMatrixData(map_rect=map_rect, tiles=res.tiles)
+        response, chat_completion = await get_chat_completion_object_response(list(GraphRegistry.get_node_types(DescriptionMatrixData))[0], messages)
+        data: DescriptionMatrixData = DescriptionMatrixData(map_rect=map_rect, tiles=response.tiles)
     else:
         raise ValueError(f"Invalid map_rect_data_type: {map_rect_data_type}")
+    map_root.tree.add_chat_completion_for_map_rect(map_rect, chat_completion)
     map_root.tree.get_or_create_data_node(data)
+    costs: TokenCosts = get_chat_completions_cost([chat_completion])
+    print_burgandy(costs)
 
 def get_toggle_readonly_questions_list(default_value: bool) -> list[dict]:
     return [
@@ -622,6 +645,11 @@ def interact_with_map_root(map_root: MapRoot) -> str:
         pydoc.pager(get_gid_description_context_string(map_root.get_tiled_map()))
     elif answer[PromptOptions.USER_OPTION] == MapOptions.VIEW_IMAGE:
         view_projected_image(map_root, ROOT_CELL_IDENTIFIER)
+    elif answer[PromptOptions.USER_OPTION] == MapOptions.VIEW_CHAT_COMPLETIONS:
+        view_chat_completions(map_root)
+    elif answer[PromptOptions.USER_OPTION] == MapOptions.VIEW_COSTS:
+        pydoc.pager(str(get_chat_completions_cost(
+                reduce(operator.add, map_root.data.map_rect_chat_completions.values()))))
     else:
         raise ValueError(f"Invalid map option: {answer[PromptOptions.USER_OPTION]}")
 

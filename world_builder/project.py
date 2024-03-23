@@ -1,3 +1,4 @@
+import datetime
 from enum import StrEnum
 from itertools import product
 from lib2to3.pytree import BasePattern
@@ -16,7 +17,7 @@ import world_builder
 from gstk.graph.graph import Node, SystemEdgeType
 from gstk.creation.group import new_group, GroupProperties, CreationGroup
 
-from world_builder.graph_registry import ChatCompletionData, MapRect, MapRootData, WorldBuilderNodeType
+from world_builder.graph_registry import MapRect, MapRootData, WorldBuilderNodeType
 from world_builder.map import MapRoot
 from world_builder.map_data_interface import get_gid_tile_properties
 
@@ -109,7 +110,6 @@ class WorldBuilderProject:
             raise Exception(f"Map root with name {map_root_data.name} already exists.")
         node: Node = self._storage_node.create_child(map_root_data)
         map_root: MapRoot = MapRoot(node, self._resource_location)
-        node.create_child(ChatCompletionData(chat_completions=dict()))
         self._storage_node.session.commit()
         return map_root
 
@@ -122,6 +122,14 @@ class WorldBuilderProject:
         map_root.data = data
         self._storage_node.save()
         self._storage_node.session.commit()
+
+    def delete_map(self, name: str):
+        map_root: Optional[MapRoot] = self.get_map_root(name)
+        if map_root is None:
+            raise Exception(f"Map root with name {name} does not exist.")
+        map_root._storage_node.deleted_at = datetime.datetime.now()
+        map_root._storage_node.save()
+        map_root._storage_node.session.commit()
 
     def clone_map(self, from_name, to_name) -> MapRoot:
         map_root = self.get_map_root(from_name)

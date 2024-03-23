@@ -3,7 +3,6 @@ import os
 from typing import Iterator, Optional
 
 from gstk.graph.graph import Node
-from gstk.llmlib.object_generation import get_chat_completion_object_response
 from gstk.models.chatgpt import Message, Role
 
 from world_builder.map import MapRoot, SparseMapTree, MapRect, WorldBuilderNodeType, get_cell_prompt
@@ -69,6 +68,7 @@ Map description: A description of the entire map.
                 depth_descriptions.append(f"{LEVEL_LABEL_MAP[i]} level prompt describes subset area nine times smaller than {LEVEL_LABEL_MAP[i-1]} level prompt at the provided position in the {map_root.data.draw_diameter}x{map_root.data.draw_diameter} parent matrix.")
     print(depth_descriptions)
     return system_message_base + os.linesep.join(depth_descriptions) + os.linesep
+
 
 
 
@@ -145,12 +145,13 @@ def get_map_parent_chain(map_root: MapRoot, map_rect: MapRect) -> Iterator[MapRe
         if map_root.tree.hierarchy.get_rect_level(current_map_rect) == 0:
             break
         current_map_rect = map_root.tree.hierarchy.get_parent_rect(current_map_rect)
-    
+
 def get_description_matrix_context_messages(
         map_root: MapRoot, map_rect: MapRect) -> Iterator[Message]:
     messages: list[Message] = []
     current_map_rect: MapRect = map_rect
 
+    """
     parent_map_rects = reversed(list(get_map_parent_chain(map_root, map_rect)))
     for parent_map_rect in parent_map_rects:
         node: Node = map_root.tree.get_data_node(parent_map_rect)
@@ -167,6 +168,7 @@ def get_description_matrix_context_messages(
                 content=f"tiles:\n{node.data.tiles}"
             )
         ])
+    """
 
     #messages.append(
     #    Message(
@@ -183,3 +185,4 @@ def get_description_matrix_context_messages(
         )
     ])
     return messages
+
