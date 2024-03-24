@@ -21,6 +21,9 @@ from pydantic import BaseModel
 
 # START Monkey patch.
 import collections
+
+from world_builder.context.base import ContextEngineBase
+from world_builder.context.engine import get_context_engine_for_map_root, DEFAULT_CONTEXT_ENGINE_NAME, list_context_engines
 collections.Mapping = collections.abc.Mapping
 # END Monkey patch.
 
@@ -36,7 +39,8 @@ from gstk.graph.graph import Node, get_project, new_project
 from gstk.graph.registry import GraphRegistry, ProjectProperties
 from world_builder.graph_registry import DrawDiameterInt, MapRootData, MapRect, MapMatrixData, DescriptionMatrixData
 from world_builder.table import Table
-from world_builder.context import get_description_matrix_context_messages
+from world_builder.context.engine import get_context_engine_for_map_root
+import world_builder.context
 from world_builder.project import MapRoot, WorldBuilderProject, WorldBuilderProjectDirectory
 from world_builder.map import MAP_METADATA_DIRNAME, MapHierarchy, MapRootData, MapRoot, SparseMapNode, CELL_IDENTIFER_RE, ROOT_CELL_IDENTIFIER, get_cell_prompt, set_cell_prompt
 from world_builder.map_data_interface import get_gid_description_context_string, get_image_from_tile_matrix
@@ -86,7 +90,8 @@ class MapOptions(StrEnum):
     VIEW_IMAGE = "View Image"
     READONLY = "Set Readonly"
     VIEW_CHAT_COMPLETIONS = "View Chat Completions"
-    VIEW_COSTS = "View Costs"
+    SELECT_CONTEXT_ENGINE = "Change Context Engine"
+    VIEW_COSTS = "View Spending (USD)"
 
 class BackNavigations(StrEnum):
     BACK = "Back"
@@ -479,9 +484,13 @@ async def generate_child_matrix(map_root: MapRoot, cell_identifier: str):
     if map_root.data.readonly:
         print_burgandy("Map is readonly.  Cannot generate child matrix.")
         return
+    context_engine: ContextEngineBase = get_context_engine_for_map_root(map_root)
+    if not context_engine.can_create_child_matrix(map_root, cell_identifier):
+        print_burgandy(f"Skipping child matrix generation for cell {cell_identifier}.  Context engine cannot create child matrix for cell")
+        return
     print(f"Generating child matrix for cell {cell_identifier}.")
     map_rect: MapRect = map_root.tree.get_sparse_node_from_cell_identifier(cell_identifier).rect
-    messages: list[Message] = get_description_matrix_context_messages(map_root, map_rect)
+    messages: list[Message] = context_engine.get_child_matrix_creation_context(map_root, map_rect)
     map_rect_data_type: Type[DescriptionMatrixData|MapMatrixData] = map_root.tree.get_map_rect_data_type(map_rect)
     if map_rect_data_type == MapMatrixData:
         response, chat_completion = await get_chat_completion_object_response(list(GraphRegistry.get_node_types(MapMatrixData))[0], messages)
@@ -537,8 +546,9 @@ async def generate_recursive_matrices(map_root: MapRoot, cell_identifier: str):
             await generate_child_matrix(map_root, sparse_node.cell_identifier)
 
 def view_context_chain(map_root: MapRoot, cell_identifier: str):
+    context_engine: ContextEngineBase = get_context_engine_for_map_root(map_root)
     map_rect: MapRect = map_root.tree.get_sparse_node_from_cell_identifier(cell_identifier).rect
-    messages: list[Message] = get_description_matrix_context_messages(map_root, map_rect)
+    messages: list[Message] = context_engine.get_child_matrix_creation_context(map_root, map_rect)
     pydoc.pager("\n".join([str(m) for m in messages]))
     #pydoc.pager(pprint.pformat(messages))
     #pydoc.pager(pprint.pformat([instance.model_dump() for instance in get_description_matrix_context_messages(map_root, map_rect)]))
@@ -606,6 +616,15 @@ async def interact_with_cell(map_root: MapRoot, cell_identifier: str) -> tuple[V
     else:
         raise ValueError(f"Invalid cell option: {answer[PromptOptions.USER_OPTION]}")
 
+def get_context_engine_questions_list(context_engine_names: list[str]) -> list[dict]:
+    return [
+        {
+            'type': 'list',
+            'name': 'user_option',
+            'message': 'Select context engine:',
+            'choices': context_engine_names + [BackNavigations.BACK]
+        }
+    ]
 
 #class MapOptions(StrEnum):
 #    GOTO_ROOT_CELL = "Goto Root Cell"
@@ -618,6 +637,7 @@ def format_human_readable_map_description(map_root: MapRoot) -> str:
     header += f"\nDraw Diameter: {map_root.data.draw_diameter}"
     header += f"\nWidth: {map_root.data.width} Height: {map_root.data.height}"
     header += f"\nReadonly: {map_root.data.readonly}"
+    header += f"\nContext Engine: {map_root.data.context_engine_name if map_root.data.context_engine_name else 'Default'}"
     return header
 
 def interact_with_map_root(map_root: MapRoot) -> str:
@@ -650,6 +670,18 @@ def interact_with_map_root(map_root: MapRoot) -> str:
     elif answer[PromptOptions.USER_OPTION] == MapOptions.VIEW_COSTS:
         pydoc.pager(str(get_chat_completions_cost(
                 reduce(operator.add, map_root.data.map_rect_chat_completions.values()))))
+    elif answer[PromptOptions.USER_OPTION] == MapOptions.SELECT_CONTEXT_ENGINE:
+        # check readonly
+        if map_root.data.readonly:
+            print_burgandy("Map is readonly.  Cannot change context engine.")
+            return
+        placeholder_for_default: str = "Default"
+        context_engine_names = [placeholder_for_default] + list_context_engines()
+        answer_context: dict = prompt(get_context_engine_questions_list(context_engine_names))
+        if not answer_context or answer_context[PromptOptions.USER_OPTION] == BackNavigations.BACK:
+            return
+        selected_context_engine_name: Optional[str] = answer_context[PromptOptions.USER_OPTION] if answer_context[PromptOptions.USER_OPTION] != placeholder_for_default else None
+        map_root.set_context_engine_name(selected_context_engine_name)
     else:
         raise ValueError(f"Invalid map option: {answer[PromptOptions.USER_OPTION]}")
 

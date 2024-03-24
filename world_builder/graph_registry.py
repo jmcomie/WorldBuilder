@@ -66,6 +66,7 @@ class MapRootData(BaseModel):
     # Chat completion data key is the map rect as a string.
     # The values are lists of chat completions used.
     map_rect_chat_completions: dict[str, list[dict]] = Field(default_factory=dict, description="Chat completions for each map rect.")
+    context_engine_name: Optional[str] = None # None means use default context engine.
 
 @GraphRegistry.node_type(WorldBuilderNodeType.MAP_MATRIX)
 class MapMatrixData(MapRectMetadata):

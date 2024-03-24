@@ -481,6 +481,15 @@ class MapRoot:
         self._storage_node.save()
         self._storage_node.session.commit()
 
+    def set_context_engine_name(self, name: str|None) -> None:
+        data: MapRootData = self._storage_node.data
+        if data.context_engine_name == name:
+            return
+        data.context_engine_name = name
+        self._storage_node.data = data
+        self._storage_node.save()
+        self._storage_node.session.commit()
+
     # Methods below are related to Asset Management
     def get_image_buffer_from_tile_matrix(self, tile_matrix: list[list[int]]) -> Any:
         raise NotImplementedError

@@ -5,6 +5,8 @@ from typing import Iterator, Optional
 from gstk.graph.graph import Node
 from gstk.models.chatgpt import Message, Role
 
+from world_builder.context.base import ContextEngineBase
+from world_builder.context.engine import register_context_engine
 from world_builder.map import MapRoot, SparseMapTree, MapRect, WorldBuilderNodeType, get_cell_prompt
 from world_builder.graph_registry import DescriptionMatrixData
 from world_builder.map_data_interface import get_gid_description_context_string
@@ -146,43 +148,48 @@ def get_map_parent_chain(map_root: MapRoot, map_rect: MapRect) -> Iterator[MapRe
             break
         current_map_rect = map_root.tree.hierarchy.get_parent_rect(current_map_rect)
 
-def get_description_matrix_context_messages(
-        map_root: MapRoot, map_rect: MapRect) -> Iterator[Message]:
-    messages: list[Message] = []
-    current_map_rect: MapRect = map_rect
+@register_context_engine("feb2024")
+class Feb2024ContextEngine(ContextEngineBase):
+    def get_child_matrix_creation_context(self,
+            map_root: MapRoot, map_rect: MapRect) -> Iterator[Message]:
+        messages: list[Message] = []
+        current_map_rect: MapRect = map_rect
 
-    """
-    parent_map_rects = reversed(list(get_map_parent_chain(map_root, map_rect)))
-    for parent_map_rect in parent_map_rects:
-        node: Node = map_root.tree.get_data_node(parent_map_rect)
-        if node is None:
-            continue
+        """
+        parent_map_rects = reversed(list(get_map_parent_chain(map_root, map_rect)))
+        for parent_map_rect in parent_map_rects:
+            node: Node = map_root.tree.get_data_node(parent_map_rect)
+            if node is None:
+                continue
+            messages.extend([
+                get_parent_data_context(map_root, parent_map_rect),
+                Message(
+                    role=Role.USER,
+                    content=get_cell_prompt_with_context(map_root, parent_map_rect)
+                ),
+                Message(
+                    role=Role.ASSISTANT,
+                    content=f"tiles:\n{node.data.tiles}"
+                )
+            ])
+        """
+
+        #messages.append(
+        #    Message(
+        #        role=Role.USER,
+        #        content=get_cell_prompt_with_context(map_root, map_rect)
+        #    )
+        #)   
+
         messages.extend([
-            get_parent_data_context(map_root, parent_map_rect),
+            get_parent_data_context(map_root, map_rect),
             Message(
                 role=Role.USER,
-                content=get_cell_prompt_with_context(map_root, parent_map_rect)
-            ),
-            Message(
-                role=Role.ASSISTANT,
-                content=f"tiles:\n{node.data.tiles}"
+                content=get_cell_prompt_with_context(map_root, map_rect)
             )
         ])
-    """
+        return messages
 
-    #messages.append(
-    #    Message(
-    #        role=Role.USER,
-    #        content=get_cell_prompt_with_context(map_root, map_rect)
-    #    )
-    #)   
-
-    messages.extend([
-        get_parent_data_context(map_root, map_rect),
-        Message(
-            role=Role.USER,
-            content=get_cell_prompt_with_context(map_root, map_rect)
-        )
-    ])
-    return messages
+    def can_create_child_matrix(self, map_root: MapRoot, map_rect: MapRect) -> bool:
+        return True
 
