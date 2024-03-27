@@ -30,7 +30,7 @@ LEVEL_LABEL_MAP: dict[int, str] = {
 def get_system_message(map_root: MapRoot, depth: int):
     if depth != map_root.tree.hierarchy.get_tree_height() - 1:
         system_message_base: str = f"""\
-The root prompt is a description of the entire map. It is the first prompt in the recursive chain of prompts that describe the map.
+The map description is a description of the entire map. It is the first prompt in the recursive chain of prompts that describe the map.
 
 You are assisting in the creation of an {map_root.data.width}x{map_root.data.height} tile map.  To better utilize your internal semantic vector space, rather than being asked to create the {map_root.data.width}x{map_root.data.height} tile map in one go, you will create a {map_root.data.draw_diameter}x{map_root.data.draw_diameter} prompt matrix that divides the entire map into 9 cells. Each cell is to contain a prompt describing its corresponding projected area on the map, with a linguistic complexity appropriate to the map description. From there, you will create a {map_root.data.draw_diameter}x{map_root.data.draw_diameter} prompt matrix representing the areas below each of the 9 initial cells, and so on, until you have created the {map_root.data.width}x{map_root.data.height} tile map.  Note that, accordingly, each level of the map contains nine times more total cells than the level above it, and each cell corresponds to nine times less area of the tile map than the cells in the level above it.
 
@@ -42,7 +42,7 @@ Map description: A description of the entire map.
 """
     else:
         system_message_base: str = f"""\
-The root prompt is a description of the entire map. It is the first prompt in the recursive chain of prompts that describe the map.
+The map description is a description of the entire map. It is the first prompt in the recursive chain of prompts that describe the map.
 
 You are assisting in the creation of an {map_root.data.width}x{map_root.data.height} tile GID map.  To better utilize your internal semantic vector space, rather than being asked to create the {map_root.data.width}x{map_root.data.height} tile map in one go, you will create a {map_root.data.draw_diameter}x{map_root.data.draw_diameter} prompt matrix that divides the entire map into 9 cells. Each cell is to contain a prompt describing its corresponding projected area on the map, with a linguistic complexity appropriate to the map description. From there, you will create a {map_root.data.draw_diameter}x{map_root.data.draw_diameter} prompt matrix representing the areas below each of the 9 initial cells, and so on, until you have created the {map_root.data.width}x{map_root.data.height} tile map. The non-leaf level values you create are 3x3 prompt string matrices, and leaf level values are {map_root.data.draw_diameter}x{map_root.data.draw_diameter} integer tile map GID values.  Note that each level of the map contains nine times more total cells than the level above it, and each cell corresponds to nine times less area of the tile map than the cells in the level above it.
 
@@ -120,12 +120,13 @@ def get_cell_prompt_with_context(map_root: MapRoot, map_rect: MapRect) -> Messag
 
     parent_context: list[str] = []
     if parent:
+        print(f"PARENT NODE TYPE: {parent.node_type}")
         while parent.node_type != WorldBuilderNodeType.MAP_ROOT:
             parent_level = map_root.tree.hierarchy.get_rect_level(parent.data.map_rect)
             print(f"Parent level: {parent_level}")
-            assert parent_level != level and parent_level < level
+            #assert parent_level != level and parent_level < level
             coords_in_parent = map_root.tree.hierarchy.get_coordinates_in_parent(node.data.map_rect)
-            parent_context.insert(0, f"{LEVEL_LABEL_MAP[parent_level][0].upper() + LEVEL_LABEL_MAP[parent_level][1:]} level prompt [y,x coords in parent: {coords_in_parent[1], coords_in_parent[0]}]: {np.array(parent.data.tiles)[*coords_in_parent]}")
+            parent_context.insert(0, f"{LEVEL_LABEL_MAP[parent_level][0].upper() + LEVEL_LABEL_MAP[parent_level][1:]} level prompt [y,x coords in parent: {coords_in_parent[0], coords_in_parent[1]}]: {np.array(parent.data.tiles)[*coords_in_parent]}")
             node = parent
             parent = parent.parent
     assert parent is None or parent.node_type == WorldBuilderNodeType.MAP_ROOT
@@ -151,7 +152,7 @@ def get_map_parent_chain(map_root: MapRoot, map_rect: MapRect) -> Iterator[MapRe
 @register_context_engine("feb2024")
 class Feb2024ContextEngine(ContextEngineBase):
     def get_child_matrix_creation_context(self,
-            map_root: MapRoot, map_rect: MapRect) -> Iterator[Message]:
+            map_rect: MapRect) -> Iterator[Message]:
         messages: list[Message] = []
         current_map_rect: MapRect = map_rect
 
@@ -179,17 +180,17 @@ class Feb2024ContextEngine(ContextEngineBase):
         #        role=Role.USER,
         #        content=get_cell_prompt_with_context(map_root, map_rect)
         #    )
-        #)   
+        #)
 
         messages.extend([
-            get_parent_data_context(map_root, map_rect),
+            get_parent_data_context(self.map_root, map_rect),
             Message(
                 role=Role.USER,
-                content=get_cell_prompt_with_context(map_root, map_rect)
+                content=get_cell_prompt_with_context(self.map_root, map_rect)
             )
         ])
         return messages
 
-    def can_create_child_matrix(self, map_root: MapRoot, map_rect: MapRect) -> bool:
+    def can_create_child_matrix(self, map_rect: MapRect) -> bool:
         return True
 

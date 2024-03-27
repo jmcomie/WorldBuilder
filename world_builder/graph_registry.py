@@ -17,7 +17,7 @@ class WorldBuilderNodeType(StrEnum):
     DESCRIPTION_MATRIX = "world_builder.description_matrix"
     WORLD_BUILDER_ALL = "world_builder.*"
 
-DrawDiameterInt = Literal[3, 4, 5, 6, 7, 8, 9, 10]
+DrawDiameterInt = Literal[2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 
 GraphRegistry.register_connection_type(SystemNodeType.PROJECT,

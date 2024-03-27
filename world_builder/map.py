@@ -120,6 +120,15 @@ class MapHierarchy(object):
         return self.global_row_count / row_count, self.global_column_count / column_count
 
     def get_rect_matrix(self, depth: int) -> np.ndarray[MapRect]:
+        """
+        Returns a 2d matrix of all map rects at a given depth.
+
+        Args:
+            depth (int): _description_
+
+        Returns:
+            np.ndarray[MapRect]: _description_
+        """
         level_shape = self.get_shape_at_depth(depth)
         arr: list[list[MapRect]] = np.ndarray((int(level_shape[0]), int(level_shape[1]),), dtype=object)
         leaf_count: tuple[int, int] = self.get_leaf_count_per_tile(depth)
@@ -132,7 +141,24 @@ class MapHierarchy(object):
         if not row_count.is_integer() or not column_count.is_integer():
             raise ValueError(f"Invalid rect {map_rect} at depth {self.get_rect_level(map_rect)}.")
 
+# what if we use projections rather than a child structure.  This way
+# we can be very flexible in the hierarchy.
+
     def list_level_coordinates(self, depth: int) -> Iterator[tuple[int, int]]:
+        """Iterates y,x coordinates of each cell at a given depth.
+
+        Args:
+            depth (int): _description_
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            _type_: _description_
+
+        Yields:
+            Iterator[tuple[int, int]]: _description_
+        """
         row_count, column_count = self.get_shape_at_depth(depth)
         print(row_count, column_count)
         if not row_count.is_integer() or not column_count.is_integer():
@@ -300,17 +326,26 @@ class SparseMapTree:
         parent_chain: list[MapRect] = []
         current_rect: MapRect = map_rect
 
-        if self._map_hierarchy.get_rect_level(map_rect) > 0:
-            # in level 1 case, current_rect becomes the sole level 0 rect. it will have a data node, so there will be no parent chain.
-            current_rect = self._map_hierarchy.get_parent_rect(map_rect)
-            # Ascend the tree until we find a node that has a data node.
-            while not self.has_data_node(current_rect) and self._map_hierarchy.get_rect_level(current_rect) >= 0:
-                parent_chain.append(current_rect)
-                current_rect = self._map_hierarchy.get_parent_rect(current_rect)
+        if self.hierarchy.get_rect_level(map_rect) == 0:
+            return self._map_root_node
 
-        # this logic is buggy when connecting rect level 0 its children
-        parent_rect_node: Node = self.get_data_node(current_rect) if self._map_hierarchy.get_rect_level(map_rect) != 0 else self._map_root_node
+        if self.hierarchy.get_rect_level(map_rect) > 0:
+            current_rect = self.hierarchy.get_parent_rect(map_rect)
+            while not self.has_data_node(current_rect):
+                parent_chain.append(current_rect)
+                if self.hierarchy.get_rect_level(current_rect) == 0:
+                    break
+                current_rect = self.hierarchy.get_parent_rect(current_rect)
+
+        if not parent_chain and self.hierarchy.get_rect_level(map_rect) == 0:
+            parent_rect_node = 
+        if not parent_chain and self.hierarchy.get_rect_level(map_rect) == 1:
+            parent_rect_node = self.get_data_node(current_rect)
+        else:
+            parent_rect_node: Node = self.get_data_node(current_rect) if self.hierarchy.get_rect_level(current_rect) != 0 else self._map_root_node
         # Create in descending order.
+        print(f"PARENT RECT NODE: {parent_rect_node}")
+        print(f"SELF MAP ROOT NODE: {self._map_root_node}")
         for rect in reversed(parent_chain):
             new_node: Node = parent_rect_node.create_child(self._get_empty_model_instance(rect))
             new_node.save()
@@ -462,6 +497,7 @@ class MapRoot:
 
     @property
     def data(self) -> MapRootData:
+        assert isinstance(self._storage_node.data, MapRootData)
         return self._storage_node.data
 
     @data.setter
