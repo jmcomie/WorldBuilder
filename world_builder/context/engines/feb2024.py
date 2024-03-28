@@ -8,7 +8,7 @@ from gstk.models.chatgpt import Message, Role
 from world_builder.context.base import ContextEngineBase
 from world_builder.context.engine import register_context_engine
 from world_builder.map import MapRoot, SparseMapTree, MapRect, WorldBuilderNodeType, get_cell_prompt
-from world_builder.graph_registry import DescriptionMatrixData
+from world_builder.graph_registry import AreaDescription
 from world_builder.map_data_interface import get_gid_description_context_string
 
 # Implement view context chain.

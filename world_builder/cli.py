@@ -1,8 +1,11 @@
 import asyncio
 from functools import reduce
 from itertools import product
+import json
 import operator
-import devtools
+import os
+import subprocess
+import click
 from enum import Enum, StrEnum
 from pathlib import Path
 import pprint
@@ -13,6 +16,16 @@ from typing import Any, Callable, Optional, Type, get_args
 import code
 import readline
 import rlcompleter
+
+import nest_asyncio
+from platformdirs import user_config_dir
+
+from world_builder.chatgpt_cli import run_chat_completion
+from world_builder.config import APPNAME, SETTINGS_FILENAME
+from world_builder.models import ContextBuffer
+from world_builder.settings import Settings, get_settings, set_settings
+nest_asyncio.apply()
+
 
 
 import numpy as np
@@ -37,16 +50,15 @@ from gstk.graph.graph import Node, get_project, new_project
 #from gstk.creation.group import get_chat_completion_object_response
 
 from gstk.graph.registry import GraphRegistry, ProjectProperties
-from world_builder.graph_registry import DrawDiameterInt, MapRootData, MapRect, MapMatrixData, DescriptionMatrixData
+from world_builder.graph_registry import DEFAULT_DRAW_DIAMETER, DrawDiameterInt, MapCell, MapRootData, MapRect, MapMatrixData, AreaDescription
 from world_builder.table import Table
 from world_builder.context.engine import get_context_engine_for_map_root
 import world_builder.context
 from world_builder.project import MapRoot, WorldBuilderProject, WorldBuilderProjectDirectory
 from world_builder.map import MAP_METADATA_DIRNAME, MapHierarchy, MapRootData, MapRoot, SparseMapNode, CELL_IDENTIFER_RE, ROOT_CELL_IDENTIFIER, get_cell_prompt, set_cell_prompt
 from world_builder.map_data_interface import get_gid_description_context_string, get_image_from_tile_matrix
-from PyInquirer import prompt
+from InquirerPy import prompt
 from prompt_toolkit.validation import Validator, ValidationError
-from PyInquirer import print_function
 
 
 class ExitDirectiveException(Exception): pass
@@ -75,6 +87,7 @@ class CellOptions(StrEnum):
     VIEW_PROMPT = "View Cell Prompt"
     EDIT_PROMPT = "Edit Cell Prompt"
     VIEW_CHILD_MATRIX = "View Child Matrix"
+    MAP_CHAT = "Map Chat"
     GENERATE_CHILD_MATRIX = "Generate Child Matrix"
     GENERATE_RECURSIVE_MATRICES = "Generate Recursive Matrices"
     GOTO_CELL = "Goto Cell"
@@ -92,6 +105,7 @@ class MapOptions(StrEnum):
     VIEW_CHAT_COMPLETIONS = "View Chat Completions"
     SELECT_CONTEXT_ENGINE = "Change Context Engine"
     VIEW_COSTS = "View Spending (USD)"
+    SET_DEFAULT = "Set Default"
 
 class BackNavigations(StrEnum):
     BACK = "Back"
@@ -105,6 +119,7 @@ class Views(Enum):
     CELL = 3
     MATRIX = 4
     CONTEXT_CHAIN = 5
+    CHAT = 6
 
 
 def print_burgandy(text: str):
@@ -261,27 +276,19 @@ def get_new_map_name_and_diameter_questions_list(existing_map_names: list[str], 
         {
             'type': 'input',
             'name': 'description',
-            'message': 'Description:',
+            'message': 'Description (Optional):',
             'when': lambda x: map_root is None,
-            'validate': lambda text: len(text) > 20 and len(text) < 500
         },
-        {
-            'type': 'input',
-            'name': 'draw_diameter',
-            'message': 'Draw diameter:',
-            'filter': lambda val: int(val),
-            'when': lambda x: map_root is None,
-            'validate': validate_diameter
-        },
+        # DEV NOTE: can support arbitrary map sizes with dynamic matrix draw diameters.
     ]
 
 
-def get_validate_width_and_height_fn(draw_diameter: int):
+def get_validate_width_and_height_fn():
     def validate_width_and_height(text: str):
         if text == BACK_DIRECTIVE_INVOCATION_STRING:
             raise BackDirectiveException()
-        if int(text) % int(draw_diameter) != 0:
-            raise ValidationError(message=f"Width and height must be a multiple of {draw_diameter}.",
+        if int(text) % int(DEFAULT_DRAW_DIAMETER) != 0:
+            raise ValidationError(message=f"Width and height must be a multiple of {DEFAULT_DRAW_DIAMETER}.",
                                   cursor_position=len(text))
         return True
     return validate_width_and_height
@@ -310,21 +317,21 @@ def get_asset_selection_questions_list(map_root: MapRoot) -> list[dict]:
         }
     ]
 
-def get_new_map_width_and_height_questions_list(draw_diameter: int) -> list[dict]:
+def get_new_map_width_and_height_questions_list() -> list[dict]:
     return [
         {
             'type': 'input',
             'name': 'width',
             'message': 'Map width:',
             'filter': lambda val: int(val),
-            'validate': get_validate_width_and_height_fn(draw_diameter)
+            'validate': get_validate_width_and_height_fn()
         },
         {
             'type': 'input',
             'name': 'height',
             'message': 'Map height:',
             'filter': lambda val: int(val),
-            'validate': get_validate_width_and_height_fn(draw_diameter)
+            'validate': get_validate_width_and_height_fn()
         },
     ]
 
@@ -393,10 +400,9 @@ def select_map_root(project: WorldBuilderProject) -> MapRoot:
         answer_new = prompt(get_new_map_name_and_diameter_questions_list(map_root_dict.keys()))
         if not answer_new:
             raise BackDirectiveException()
-        answer_new.update(prompt(get_new_map_width_and_height_questions_list(answer_new['draw_diameter'])))
+        answer_new.update(prompt(get_new_map_width_and_height_questions_list()))
         map_root = project.new_map_root(
                 MapRootData(name=answer_new['name'],
-                            draw_diameter=answer_new['draw_diameter'],
                             description=answer_new["description"],
                             width=answer_new['width'],
                             height=answer_new['height']))
@@ -441,6 +447,7 @@ def select_map_root(project: WorldBuilderProject) -> MapRoot:
 def view_prompt(map_root: MapRoot, cell_identifier: str):
     pydoc.pager(get_cell_prompt(map_root, cell_identifier))
 
+
 def view_chat_completions(map_root: MapRoot):
     assert isinstance(map_root.data, MapRootData)
     if not map_root.data.map_rect_chat_completions:
@@ -450,22 +457,18 @@ def view_chat_completions(map_root: MapRoot):
         for chat_completion in chat_completion_list:
             pprint.pprint(chat_completion)
 
+
+def get_editor(default: str = "vim") -> str:
+    return os.getenv("EDITOR", default)
+
 def edited_prompt(prompt_str: str):
-    questions = [
-    {
-        'type': 'editor',
-        'name': 'contents',
-        'message': 'Editor',
-        'default': prompt_str,
-        'eargs': {
-            'ext':'.txt',
-            'editor':'vim'
-            #'filename': filepath
-        }
-    }
-    ]
-    answer = prompt(questions)
-    return answer['contents']
+    with tempfile.NamedTemporaryFile(suffix=".txt", mode="w") as temp_file:
+        if prompt_str:
+            temp_file.write(prompt_str)
+        temp_file.flush()
+        subprocess.run([get_editor(), temp_file.name])        
+        with open(temp_file.name, "r") as temp_file:
+            return temp_file.read()
 
 
 def edit_prompt(map_root: MapRoot, cell_identifier: str):
@@ -492,19 +495,20 @@ async def generate_child_matrix(map_root: MapRoot, cell_identifier: str):
     print(f"Generating child matrix for cell {cell_identifier}.")
     map_rect: MapRect = map_root.tree.get_sparse_node_from_cell_identifier(cell_identifier).rect
     messages: list[Message] = context_engine.get_child_matrix_creation_context(map_rect)
-    map_rect_data_type: Type[DescriptionMatrixData|MapMatrixData] = map_root.tree.get_map_rect_data_type(map_rect)
+    map_rect_data_type: Type[AreaDescription|MapMatrixData] = map_root.tree.get_map_rect_data_type(map_rect)
     if map_rect_data_type == MapMatrixData:
         response, chat_completion = await get_chat_completion_object_response(list(GraphRegistry.get_node_types(MapMatrixData))[0], messages)
         data: MapMatrixData = MapMatrixData(map_rect=map_rect, tiles=response.tiles)
-    elif map_rect_data_type == DescriptionMatrixData:
-        response, chat_completion = await get_chat_completion_object_response(list(GraphRegistry.get_node_types(DescriptionMatrixData))[0], messages)
-        data: DescriptionMatrixData = DescriptionMatrixData(map_rect=map_rect, tiles=response.tiles)
+    elif map_rect_data_type == AreaDescription:
+        response, chat_completion = await get_chat_completion_object_response(list(GraphRegistry.get_node_types(AreaDescription))[0], messages)
+        data: AreaDescription = AreaDescription(map_rect=map_rect, tiles=response.tiles)
     else:
         raise ValueError(f"Invalid map_rect_data_type: {map_rect_data_type}")
     map_root.tree.add_chat_completion_for_map_rect(map_rect, chat_completion)
     map_root.tree.get_or_create_data_node(data)
     costs: TokenCosts = get_chat_completions_cost([chat_completion])
     print_burgandy(costs)
+
 
 def get_toggle_readonly_questions_list(default_value: bool) -> list[dict]:
     return [
@@ -570,16 +574,41 @@ def format_human_readable_cell_description(map_root: MapRoot, cell_identifier: s
     return header
 
 def confirm_prompt(message: str) -> bool:
-    answer: dict = prompt([
+    return prompt([
         {
             'type': 'confirm',
             'message': message,
             'name': 'confirm',
             'default': False,
         },
-    ])
-    return answer['confirm']
+    ])['confirm']
 
+
+class MapCellContextBuffer(ContextBuffer):
+    # Note: no seek position is maintained.
+
+    def __init__(self, map_cell_data_node: Node):
+        super().__init__()    
+        if not isinstance(map_cell_data_node.data, MapCell):
+            raise ValueError(f"Expected MapCell data node.  Got {type(map_cell_data_node.data)}")
+        self._buffer.extend(map_cell_data_node.data.prompt_chain if map_cell_data_node.data.prompt_chain else [])
+        self._map_cell: Node = map_cell_data_node
+
+    def save(self):
+        data: MapCell = self._map_cell.data
+        data.prompt_chain = self._buffer
+        print(f"Saving data: {data}")
+        self._map_cell.data = data
+        self._map_cell.save(commit=True)
+
+
+async def run_map_chat_completion(node: Node):
+    assert isinstance(node.data, MapCell)
+    context_buffer: ContextBuffer = MapCellContextBuffer(node)
+    try:
+        await run_chat_completion(context_buffer)
+    except KeyboardInterrupt:
+        print("Interrupted.")
 
 async def interact_with_cell(map_root: MapRoot, cell_identifier: str) -> tuple[Views, str]:
     header: str = format_human_readable_cell_description(map_root, cell_identifier)
@@ -614,6 +643,8 @@ async def interact_with_cell(map_root: MapRoot, cell_identifier: str) -> tuple[V
             return
         if confirm_prompt("Are you sure you want to delete the subtree?"):
             map_root.tree.delete_subtree(map_rect)
+    elif answer[PromptOptions.USER_OPTION] == CellOptions.MAP_CHAT:
+        await run_map_chat_completion(map_root.tree.ensure_data_node(map_rect))
     else:
         raise ValueError(f"Invalid cell option: {answer[PromptOptions.USER_OPTION]}")
 
@@ -635,14 +666,13 @@ def get_context_engine_questions_list(context_engine_names: list[str]) -> list[d
 
 def format_human_readable_map_description(map_root: MapRoot) -> str:
     header: str = f"Map: {map_root.data.name}\n{'-' * len('Map: ' + map_root.data.name)}"
-    header += f"\nDraw Diameter: {map_root.data.draw_diameter}"
     header += f"\nWidth: {map_root.data.width} Height: {map_root.data.height}"
     header += f"\nReadonly: {map_root.data.readonly}"
     header += f"\nContext Engine: {map_root.data.context_engine_name if map_root.data.context_engine_name else 'Default'}"
     header += f"\nTree Height: {map_root.tree.hierarchy.get_tree_height()}"
     return header
 
-def interact_with_map_root(map_root: MapRoot) -> str:
+def interact_with_map_root(project: WorldBuilderProject, map_root: MapRoot) -> str:
     header: str = format_human_readable_map_description(map_root)
     print_burgandy(header)
 
@@ -684,8 +714,14 @@ def interact_with_map_root(map_root: MapRoot) -> str:
             return
         selected_context_engine_name: Optional[str] = answer_context[PromptOptions.USER_OPTION] if answer_context[PromptOptions.USER_OPTION] != placeholder_for_default else None
         map_root.set_context_engine_name(selected_context_engine_name)
+    elif answer[PromptOptions.USER_OPTION] == MapOptions.SET_DEFAULT:
+        settings: Settings = get_settings() or Settings()
+        settings.default_project = project.project_id
+        settings.default_map = map_root.data.name
+        set_settings(settings)
     else:
         raise ValueError(f"Invalid map option: {answer[PromptOptions.USER_OPTION]}")
+
 
 def view_matrix(map_root: MapRoot, cell: str):
     matrix_str: str
@@ -695,7 +731,7 @@ def view_matrix(map_root: MapRoot, cell: str):
     else:
         assert isinstance(sparse_node.data, BaseModel)
         data = sparse_node.data.model_copy()
-        if isinstance(data, DescriptionMatrixData):
+        if isinstance(data, AreaDescription):
             hierarchy: MapHierarchy = map_root.tree.hierarchy
             rect_child_matrix: np.array = hierarchy.get_rect_child_matrix(sparse_node.rect)
             arr = np.array(data.tiles)
@@ -709,13 +745,13 @@ def view_matrix(map_root: MapRoot, cell: str):
     pydoc.pager(matrix_str)
 
 
-SUPPORTED_VIEW_CHAIN: list[Views] = [Views.LANDING, Views.PROJECT, Views.MAP, Views.CELL]
+SUPPORTED_VIEW_CHAIN: list[Views] = [Views.LANDING, Views.PROJECT, Views.MAP, Views.CELL, Views.CHAT]
 
 
 class CLIController():
     def __init__(self, project_locator: WorldBuilderProjectDirectory):
         self._project_locator = project_locator
-        self._view_chain: list[Views] = [Views.LANDING]
+        self._view_chain: list[Views] = []
         self._project: WorldBuilderProject = None
         self._map_root: MapRoot = None
         self._cell: str = None
@@ -729,7 +765,8 @@ class CLIController():
         return self._map_root
 
     async def run(self, exit_view: Optional[Views] = None):
-        self._view_chain = [Views.LANDING]
+        self.append_view(Views.LANDING)
+        self._check_settings()
         should_exit: bool = False
         while not should_exit:
             try:
@@ -778,7 +815,7 @@ class CLIController():
             if self._map_root is not None:
                 self.append_view(Views.MAP)
         elif self._view_chain[-1] == Views.MAP:
-            cell_identifier: str = interact_with_map_root(self._map_root)
+            cell_identifier = interact_with_map_root(self._project, self._map_root)
             if cell_identifier is not None:
                 self._cell = cell_identifier
                 self.append_view(Views.CELL)
@@ -788,17 +825,34 @@ class CLIController():
             if cell is not None:
                 self._cell = cell
 
+    def _check_settings(self):
+        settings: Optional[Settings] = get_settings()
+        if settings is None:
+            return
+        print(f"Settings: {settings}")
+        assert isinstance(settings, Settings)
+        if settings.default_project:
+            project_node: Node = get_project(settings.default_project, self._project_locator)
+            if project_node is None:
+                print_burgandy(f"Default project {settings.default_project} not found.")
+                return
+            self._project: WorldBuilderProject = WorldBuilderProject(project_node, self._project_locator.get_project_resource_location(settings.default_project))
+            self.append_view(Views.PROJECT)
 
-"""
-Open
-List
-List with data
-Display
-Up
-"""
+        if settings.default_project and settings.default_map:
+            map_root: MapRoot = self._project.get_map_root(settings.default_map)
+            if map_root is None:
+                print_burgandy(f"Default map {settings.default_map} not found.")
+                return
+            assert isinstance(map_root, MapRoot)
+            self._map_root = map_root
+            self.append_view(Views.MAP)
 
-async def start():
-    controller = CLIController(WorldBuilderProjectDirectory())
+        print(self._view_chain)
+
+async def start(data_directory: Optional[Path] = None):
+    print(f"Using data directory: {data_directory}")
+    controller = CLIController(WorldBuilderProjectDirectory(data_directory=data_directory))
     await controller.run()
 
 def start_interactive_console():
@@ -813,26 +867,27 @@ def start_interactive_console():
     code.InteractiveConsole(vars).interact()
 
 
-async def start_interpreter():
+async def start_interpreter(data_directory: Optional[Path] = None):
     global project
     global map_root
 
-    controller = CLIController(WorldBuilderProjectDirectory())
+    controller = CLIController(WorldBuilderProjectDirectory(data_directory=data_directory))
     await controller.run(exit_view=Views.MAP)
     while controller.project is not None:    
         project = controller.project
         map_root = controller.map_root
         start_interactive_console()
         await controller.run(exit_view=Views.MAP)
-    
 
 
-def main():
-    use_interpreter_mode: bool = any([arg in {"-i", "--interpreter"} for arg in sys.argv])
-    if use_interpreter_mode:
-        asyncio.run(start_interpreter())
+@click.command()
+@click.option('-i', '--interpreter', is_flag=True, help='Use interpreter mode')
+@click.option('-d', '--data-dir', type=Path, help='Data directory')
+def main(interpreter: bool, data_dir: Optional[str]):
+    if interpreter:
+        asyncio.run(start_interpreter(data_dir))
     else:
-        asyncio.run(start())
+        asyncio.run(start(data_dir))
 
 
 if __name__ == "__main__":

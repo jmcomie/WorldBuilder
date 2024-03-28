@@ -11,10 +11,13 @@ packages = [{include = "world_builder"}]
 python = ">=3.11,<3.13"
 pygame-ce = "^2.4.0"
 gstk = {path = "../../GenerativeStoryToolkit", develop = true}
-pyinquirer = "^1.0.3"
 pytmx = "^3.32"
-langchain-experimental = "^0.0.50"
-devtools = "^0.12.2"
+#langchain-experimental = "^0.0.50"
+#devtools = "^0.12.2"
+click = "^8.1.1"
+inquirerpy = "^0.3.4"
+nest-asyncio = "^1.6.0"
+platformdirs = "^4.2.0"
 
 
 [build-system]

@@ -28,12 +28,13 @@ EXPECTED_CONTENTS: list[str] = [
 
 
 class WorldBuilderProjectDirectory(ProjectLocator):
-    base_directory = Path("world_builder_data")
+    default_data_directory = Path("wb_data")
     projects_directory_name = Path("projects")
     assets_directory = Path("assets_for_world_builder")
     base_directory_dot_filename = Path(".world_builder_root")
 
-    def __init__(self, base_path: Optional[Path] = None):
+    def __init__(self, data_directory: Optional[Path], base_path: Optional[Path] = None):
+        self.data_directory = data_directory if data_directory is not None else self.default_data_directory
         self._base_path: Path = base_path if base_path is not None else self._ensure_base_path()
         print(f"base_path: {self._base_path}")
 
@@ -49,7 +50,8 @@ class WorldBuilderProjectDirectory(ProjectLocator):
     def _ensure_base_path(self) -> BasePattern:
         base_path: Optional[Path] = self.get_ancestor_path_with_dot_file()
         if base_path is None:
-            base_path = self.base_directory
+            print(f"Data directory: {self.data_directory}")
+            base_path = self.data_directory
             if not base_path.exists():
                 base_path.mkdir(parents=True)
             (base_path / self.base_directory_dot_filename).touch()
@@ -83,6 +85,10 @@ class WorldBuilderProjectDirectory(ProjectLocator):
         print(f"returning {self.base_path / self.projects_directory_name / project_id}")
         return self.base_path / self.projects_directory_name / project_id
 
+    def get_project(self, project_id: str) -> "WorldBuilderProject":
+        if not self.project_id_exists(project_id):
+            raise ValueError(f"Project with id {project_id} does not exist.")
+        return WorldBuilderProject(Node.from_storage(self.get_project_resource_location(project_id)), self.get_project_resource_location(project_id))
 
 class WorldBuilderProject:
     def __init__(self, node: Node, resource_location: Path):
@@ -93,6 +99,10 @@ class WorldBuilderProject:
     def resource_location(self) -> Path:
         return self._resource_location
 
+    @property
+    def project_id(self) -> str:
+        return self._resource_location.name
+
     def list_map_roots(self) -> Iterator[MapRoot]:
         for node in self._storage_node.list_children():
             if isinstance(node.data, MapRootData):
@@ -101,7 +111,7 @@ class WorldBuilderProject:
     def get_map_root_dict(self) -> dict[str, MapRoot]:
         return {map_root.data.name: map_root for map_root in self.list_map_roots()}
 
-    def get_map_root(self, name: str) -> MapRoot:
+    def get_map_root(self, name: str) -> Optional[MapRoot]:
         return self.get_map_root_dict().get(name)
 
     def new_map_root(self, map_root_data: MapRootData) -> MapRoot:

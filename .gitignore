@@ -163,3 +163,4 @@ cython_debug/
 .DS_Store
 .streamlit
 world_builder_data
+wb_data
