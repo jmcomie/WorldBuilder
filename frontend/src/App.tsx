@@ -21,7 +21,7 @@ function App() {
 
   return (
     <>
-      <h1>worldbuilder</h1>
+      <h1 className="animated-title">worldbuilder</h1>
       <div>
         <p>Backend Status: {backendStatus}</p>
         <p>Database Status: {neo4jStatus}</p>
