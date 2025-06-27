@@ -6,7 +6,7 @@ Worldbuilder: full-stack app built with Python/FastAPI backend, React/TypeScript
 
 1. **Set up environment variables:**
    ```bash
-   mv backend/.env-template backend/.env
+   cp backend/.env-template backend/.env
    ```
 
 2. **Start all services:**
