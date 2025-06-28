@@ -83,6 +83,26 @@ export const api = {
       throw new Error(error.detail || 'Failed to fetch edges');
     }
     return response.json();
+  },
+
+  async getNodeDistances(centerNodeUuid: string): Promise<{
+    success: boolean;
+    center_node_uuid: string;
+    nodes: Array<{
+      uuid: string;
+      name: string;
+      labels: string[];
+      distance: number;
+      relevance_score: number;
+    }>;
+    count: number;
+  }> {
+    const response = await fetch(`${API_URL}/graph/node-distances/${centerNodeUuid}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to fetch node distances');
+    }
+    return response.json();
   }
 };
 
