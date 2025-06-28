@@ -129,7 +129,7 @@
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .navigation {
-    gap: 2rem;
+    gap: 1.5rem;
   }
   
   .navigation-media {
@@ -139,5 +139,36 @@
   
   .navigation-label {
     font-size: 0.875rem;
+  }
+  
+  .navigation-compact {
+    gap: 0.5rem;
+  }
+  
+  .navigation-compact .navigation-media {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navigation {
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .navigation-media {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .navigation-compact.navigation-main {
+    margin: 0 0.5rem;
+  }
+  
+  .navigation-compact .navigation-media {
+    width: 24px;
+    height: 24px;
   }
 }
