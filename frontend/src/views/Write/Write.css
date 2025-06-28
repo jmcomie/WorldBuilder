@@ -1,5 +1,10 @@
 .write-view {
   padding: 2rem;
+  min-height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  background-color: #f8f9fa;
 }
 
 .write-view h2 {

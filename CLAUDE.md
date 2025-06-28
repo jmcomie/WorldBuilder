@@ -64,7 +64,12 @@ npm run preview
 - `backend/app.py`: Main FastAPI application
   - Configures CORS for frontend at localhost:3000
   - Connects to Neo4j using Bolt protocol
-  - Provides health check endpoints (`/` and `/status`)
+  - Integrates Graphiti for knowledge graph management
+  - Provides health check endpoints (`/` and `/test-neo4j`)
+  - Knowledge graph endpoints:
+    - `POST /episodes`: Add new episodes to the knowledge graph
+    - `POST /search`: Search the knowledge graph using Graphiti
+    - `GET /graph`: Retrieve graph data for visualization
 
 ### Frontend Structure
 - `frontend/src/App.tsx`: Main React component
@@ -83,9 +88,11 @@ Create a `.env` file in the `backend/` directory (use `.env-template` as referen
 NEO4J_URI=bolt://neo4j:7687
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=worldbuilder
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
 Note: Inside Docker, Neo4j is accessible at `neo4j:7687`, outside Docker at `localhost:7688`
+The OPENAI_API_KEY is required for Graphiti's LLM and embedding capabilities
 
 ## Key Development Considerations
 
