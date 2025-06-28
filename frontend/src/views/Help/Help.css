@@ -1,0 +1,9 @@
+.help-view {
+  padding: 2rem;
+}
+
+.help-view h2 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #dc2626;
+}

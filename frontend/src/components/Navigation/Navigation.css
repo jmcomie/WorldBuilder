@@ -1,0 +1,143 @@
+/* Navigation Container */
+.navigation {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 3rem;
+  margin: 0;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.navigation-compact {
+  margin: 0;
+  gap: 1rem;
+}
+
+.navigation-compact.navigation-main {
+  margin: 0 2rem;
+}
+
+/* Navigation Item */
+.navigation-item {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.navigation-item:hover {
+  transform: translateY(-4px);
+}
+
+/* Media Container */
+.navigation-media {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.navigation-compact .navigation-media {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  overflow: visible;
+}
+
+/* Video/Image Styling */
+.navigation-video,
+.navigation-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Allow content to extend in compact mode */
+.navigation-compact .navigation-video,
+.navigation-compact .navigation-image {
+  object-fit: contain;
+}
+
+/* Label Styling */
+.navigation-label {
+  font-size: 1rem;
+  font-weight: 500;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+  
+  /* Animated gradient text effect like worldbuilder title */
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 400% 100%;
+  background-position: 0% 50%;
+  background-image: 
+    linear-gradient(
+      90deg,
+      #1a365d 0%,
+      #2563eb 10%,
+      #0891b2 20%,
+      #059669 30%,
+      #84cc16 40%,
+      #eab308 50%,
+      #dc2626 60%,
+      #059669 70%,
+      #0891b2 80%,
+      #2563eb 90%,
+      #1a365d 100%
+    );
+  animation: flowingMapLabel 8s ease-in-out infinite;
+}
+
+@keyframes flowingMapLabel {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Show label on hover */
+.navigation-item:hover .navigation-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Hide labels in compact mode */
+.navigation-compact .navigation-label {
+  display: none;
+}
+
+/* Active/Selected State */
+.navigation-item.active .navigation-media {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .navigation {
+    gap: 2rem;
+  }
+  
+  .navigation-media {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .navigation-label {
+    font-size: 0.875rem;
+  }
+}
