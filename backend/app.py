@@ -187,11 +187,15 @@ async def get_graph_data(
                         }
                     })
             
-            # Process edges with facts
+            # Process edges with facts (excluding MENTIONS edges)
             for record in edges:
                 source = record["source"]
                 target = record["target"]
                 rel = record["r"]
+                
+                # Skip MENTIONS edges
+                if rel.type == "MENTIONS":
+                    continue
                 
                 # Add source and target nodes if not seen
                 source_id = source.get("uuid", source.get("name", str(source.id)))
@@ -316,9 +320,9 @@ async def get_graph_with_facts(
                             }
                         })
                 
-                # Add relationships with facts
+                # Add relationships with facts (excluding MENTIONS edges)
                 for rel in record["relationships"]:
-                    if rel["source"] and rel["target"]:
+                    if rel["source"] and rel["target"] and rel["type"] != "MENTIONS":
                         edge_data = {
                             "id": rel["id"],
                             "source": rel["source"],
@@ -520,6 +524,80 @@ async def get_graph_edges(
             }
     except Exception as e:
         print(f"Error in get_graph_edges: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/graph/node-distances/{center_node_uuid}")
+async def get_node_distances(center_node_uuid: str):
+    """Calculate graph distances from a center node using Graphiti"""
+    try:
+        # Method 1: Use Graphiti search with center node for relevance
+        client = await get_graphiti()
+        
+        # Search for related nodes from center
+        search_results = await client.search(
+            query="",  # Empty query to get all related nodes
+            center_node_uuid=center_node_uuid,
+            num_results=50
+        )
+        
+        # Build a map of node distances from search results
+        node_scores = {}
+        for i, edge in enumerate(search_results):
+            # Use ranking position as a proxy for distance/relevance
+            score = 1.0 - (i / len(search_results))  # Higher score = closer/more relevant
+            if edge.source_node_uuid not in node_scores:
+                node_scores[edge.source_node_uuid] = score
+            if edge.target_node_uuid not in node_scores:
+                node_scores[edge.target_node_uuid] = score
+        
+        # Method 2: Direct Neo4j query for actual graph distances
+        with driver.session() as session:
+            result = session.run("""
+                MATCH (center {uuid: $center_uuid})
+                MATCH path = shortestPath((center)-[*0..4]-(node))
+                WHERE node.uuid IS NOT NULL AND node.uuid <> $center_uuid
+                WITH node, length(path) as distance
+                RETURN DISTINCT node.uuid as uuid, node.name as name, 
+                       labels(node) as labels, distance
+                ORDER BY distance, node.name
+                LIMIT 100
+            """, center_uuid=center_node_uuid)
+            
+            nodes = []
+            for record in result:
+                node_data = {
+                    "uuid": record["uuid"],
+                    "name": record["name"],
+                    "labels": record["labels"],
+                    "distance": record["distance"],
+                    "relevance_score": node_scores.get(record["uuid"], 0.0)
+                }
+                nodes.append(node_data)
+        
+            # Also include the center node
+            center_result = session.run("""
+                MATCH (center {uuid: $center_uuid})
+                RETURN center.uuid as uuid, center.name as name, labels(center) as labels
+            """, center_uuid=center_node_uuid)
+            
+            center_record = center_result.single()
+            if center_record:
+                nodes.insert(0, {
+                    "uuid": center_record["uuid"],
+                    "name": center_record["name"],
+                    "labels": center_record["labels"],
+                    "distance": 0,
+                    "relevance_score": 1.0
+                })
+        
+        return {
+            "success": True,
+            "center_node_uuid": center_node_uuid,
+            "nodes": nodes,
+            "count": len(nodes)
+        }
+    except Exception as e:
+        print(f"Error in get_node_distances: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.on_event("startup")

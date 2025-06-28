@@ -19,8 +19,55 @@ export const GraphVisualizationSimple: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedNode, setSelectedNode] = useState<NodeDetails | null>(null);
-    const [currentLayout, setCurrentLayout] = useState<'circle' | 'cose'>('circle');
+    const [currentLayout, setCurrentLayout] = useState<'circle' | 'cose' | 'distance'>('cose');
+    const [centerNodeId, setCenterNodeId] = useState<string | null>(null);
+    const [nodeDistances, setNodeDistances] = useState<Map<string, number>>(new Map());
     const cyRef = useRef<any>(null);
+
+    // Calculate edge weight based on fact properties
+    const calculateEdgeWeight = (edge: any) => {
+        const fact = edge.data('fact');
+        if (!fact) return 1;
+        
+        // Base weight on fact length (importance proxy)
+        let weight = Math.min(fact.length / 50, 3);
+        
+        // Boost for certain relationship types
+        if (fact.toLowerCase().includes('member of') || 
+            fact.toLowerCase().includes('works at') ||
+            fact.toLowerCase().includes('graduated from')) {
+            weight *= 1.5;
+        }
+        
+        // Consider temporal relevance if available
+        const validAt = edge.data('valid_at');
+        if (validAt) {
+            const age = Date.now() - new Date(validAt).getTime();
+            const ageInDays = age / (1000 * 60 * 60 * 24);
+            weight *= Math.max(0.5, 1 - (ageInDays / 365)); // Decay over a year
+        }
+        
+        return weight;
+    };
+
+    // Fetch node distances from a center node
+    const fetchNodeDistances = async (centerUuid: string) => {
+        try {
+            const response = await api.getNodeDistances(centerUuid);
+            const distances = new Map<string, number>();
+            
+            response.nodes.forEach(node => {
+                distances.set(node.uuid, node.distance);
+            });
+            
+            setNodeDistances(distances);
+            setCenterNodeId(centerUuid);
+            return distances;
+        } catch (err) {
+            console.error('Error fetching node distances:', err);
+            return null;
+        }
+    };
 
     useEffect(() => {
         const fetchAndRenderGraph = async () => {
@@ -52,9 +99,20 @@ export const GraphVisualizationSimple: React.FC = () => {
                         containerRef.current.style.height = '100%';
                         containerRef.current.style.position = 'relative';
                         
+                        // Process edges to add weights
+                        const processedEdges = response.elements.edges.map((edge: any) => {
+                            return {
+                                ...edge,
+                                data: {
+                                    ...edge.data,
+                                    weight: calculateEdgeWeight({ data: (key: string) => edge.data[key] })
+                                }
+                            };
+                        });
+                        
                         const cy = cytoscape({
                         container: containerRef.current,
-                        elements: [...response.elements.nodes, ...response.elements.edges],
+                        elements: [...response.elements.nodes, ...processedEdges],
                         style: [
                             {
                                 selector: 'core',
@@ -155,9 +213,21 @@ export const GraphVisualizationSimple: React.FC = () => {
                             }
                         ],
                         layout: {
-                            name: 'circle',
+                            name: 'fcose',
                             fit: true,
-                            padding: 50
+                            padding: 50,
+                            nodeRepulsion: 8000,
+                            idealEdgeLength: function(edge: any) {
+                                const weight = edge.data('weight') || 1;
+                                return 80 / weight;
+                            },
+                            edgeElasticity: function(edge: any) {
+                                const weight = edge.data('weight') || 1;
+                                return 0.45 / weight;
+                            },
+                            gravity: 0.25,
+                            numIter: 2500,
+                            quality: 'default' // Start with default for initial load
                         },
                         minZoom: 0.1,
                         maxZoom: 5,
@@ -165,7 +235,7 @@ export const GraphVisualizationSimple: React.FC = () => {
                     });
                         
                         // Add event handlers
-                        cy.on('tap', 'node', (evt: any) => {
+                        cy.on('tap', 'node', async (evt: any) => {
                             const node = evt.target;
                             setSelectedNode({
                                 id: node.id(),
@@ -173,6 +243,26 @@ export const GraphVisualizationSimple: React.FC = () => {
                                 type: node.data('type'),
                                 properties: node.data()
                             });
+                            
+                            // If in distance layout mode, use this node as center
+                            if (currentLayout === 'distance') {
+                                await fetchNodeDistances(node.id());
+                                // Trigger layout update
+                                const layoutOptions = {
+                                    name: 'concentric',
+                                    fit: true,
+                                    padding: 50,
+                                    animate: true,
+                                    animationDuration: 1000,
+                                    concentric: function(n: any) {
+                                        const distance = nodeDistances.get(n.data('id')) || Infinity;
+                                        return distance === 0 ? 100 : 1 / (distance + 0.1);
+                                    },
+                                    levelWidth: function() { return 2; },
+                                    minNodeSpacing: 50
+                                };
+                                cy.layout(layoutOptions).run();
+                            }
                         });
                         
                         cy.on('mouseover', 'node', (evt: any) => {
@@ -265,32 +355,79 @@ export const GraphVisualizationSimple: React.FC = () => {
         }
     };
     
-    const handleLayoutChange = () => {
+    const handleLayoutChange = async () => {
         if (cyRef.current) {
-            const newLayout = currentLayout === 'circle' ? 'fcose' : 'circle';
-            setCurrentLayout(newLayout as 'circle' | 'cose');
+            let newLayout: 'circle' | 'cose' | 'distance';
+            if (currentLayout === 'circle') {
+                newLayout = 'cose';
+            } else if (currentLayout === 'cose') {
+                newLayout = 'distance';
+            } else {
+                newLayout = 'circle';
+            }
+            setCurrentLayout(newLayout);
             
-            const layoutOptions = newLayout === 'fcose' ? {
+            // If switching to distance layout, use the first node as center if none selected
+            if (newLayout === 'distance' && !centerNodeId) {
+                const firstNode = cyRef.current.nodes().first();
+                if (firstNode && firstNode.data('id')) {
+                    await fetchNodeDistances(firstNode.data('id'));
+                }
+            }
+            
+            let layoutOptions: any;
+            if (newLayout === 'distance' && nodeDistances.size > 0) {
+                // Concentric layout based on graph distances
+                layoutOptions = {
+                    name: 'concentric',
+                    fit: true,
+                    padding: 50,
+                    animate: true,
+                    animationDuration: 1000,
+                    concentric: function(node: any) {
+                        const distance = nodeDistances.get(node.data('id')) || Infinity;
+                        // Invert distance for concentric value (closer = higher value)
+                        return distance === 0 ? 100 : 1 / (distance + 0.1);
+                    },
+                    levelWidth: function(nodes: any) {
+                        return 2; // Number of nodes per concentric level
+                    },
+                    minNodeSpacing: 50
+                };
+            } else if (newLayout === 'cose') {
+                layoutOptions = {
                 name: 'fcose',
                 animate: true,
                 animationDuration: 1000,
                 fit: true,
                 padding: 50,
-                nodeRepulsion: 4500,
-                idealEdgeLength: 50,
-                edgeElasticity: 0.45,
+                nodeRepulsion: 8000, // Increased for better spacing
+                idealEdgeLength: function(edge: any) {
+                    // Shorter edges for stronger relationships
+                    const weight = edge.data('weight') || 1;
+                    return 80 / weight; // Inverse relationship
+                },
+                edgeElasticity: function(edge: any) {
+                    // More elastic for weaker relationships
+                    const weight = edge.data('weight') || 1;
+                    return 0.45 / weight;
+                },
                 nestingFactor: 0.1,
                 gravity: 0.25,
                 numIter: 2500,
                 tile: true,
-                randomize: false
-            } : {
+                randomize: false,
+                quality: 'proof' // Higher quality for better results
+            };
+            } else {
+                layoutOptions = {
                 name: 'circle',
                 fit: true,
                 padding: 50,
                 animate: true,
                 animationDuration: 500
             };
+            }
             
             cyRef.current.layout(layoutOptions).run();
         }
@@ -305,7 +442,9 @@ export const GraphVisualizationSimple: React.FC = () => {
                     <button onClick={handleZoomOut} title="Zoom Out">🔍-</button>
                     <button onClick={handleFit} title="Fit to Screen">⟲</button>
                     <button onClick={handleLayoutChange} title="Toggle Layout">
-                        {currentLayout === 'circle' ? '○ Circle' : '⚡ Force'}
+                        {currentLayout === 'circle' ? '○ Circle' : 
+                         currentLayout === 'cose' ? '⚡ Force' : 
+                         '◎ Distance'}
                     </button>
                 </div>
             </div>
