@@ -26,7 +26,7 @@ export const GraphVisualizationSimple: React.FC = () => {
         const fetchAndRenderGraph = async () => {
             try {
                 console.log('Fetching graph data...');
-                const response = await api.getGraph({ limit: 100 });
+                const response = await api.getGraphWithFacts({ limit: 100 });
                 
                 if (!response.success || !containerRef.current) {
                     setError('Failed to load graph data');
@@ -126,6 +126,25 @@ export const GraphVisualizationSimple: React.FC = () => {
                                     'font-size': 10,
                                     'text-rotation': 'autorotate',
                                     'text-margin-y': -10
+                                }
+                            },
+                            {
+                                selector: 'edge[fact]',
+                                style: {
+                                    'label': 'data(fact)',
+                                    'text-wrap': 'wrap',
+                                    'text-max-width': '200px',
+                                    'font-size': 12,
+                                    'color': '#1f2937',
+                                    'text-background-color': '#ffffff',
+                                    'text-background-opacity': 0.9,
+                                    'text-background-padding': 4,
+                                    'text-border-color': '#d1d5db',
+                                    'text-border-width': 1,
+                                    'text-border-opacity': 1,
+                                    'line-color': '#3b82f6',
+                                    'target-arrow-color': '#3b82f6',
+                                    'width': 4
                                 }
                             },
                             {
