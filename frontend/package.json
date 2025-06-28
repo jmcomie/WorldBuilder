@@ -10,6 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/cytoscape": "^3.21.9",
+    "cytoscape": "^3.32.0",
+    "cytoscape-fcose": "^2.2.0",
+    "cytoscape-popper": "^4.0.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

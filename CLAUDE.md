@@ -80,6 +80,29 @@ npm run preview
 - Frontend (port 3000) → Backend (port 8000) → Neo4j (port 7688)
 - All services run in Docker containers with networking configured
 
+### API Endpoints
+
+#### Graphiti Integration
+- `POST /episodes`: Add a new episode to the knowledge graph
+  - Request body: `{ name: string, content: string, source_description?: string }`
+- `POST /search`: Search the knowledge graph
+  - Request body: `{ query: string, num_results?: number }`
+- `GET /graph`: Get graph data in Cytoscape-compatible format
+  - Query params: `limit`, `offset`, `node_type`
+- `GET /graph/stats`: Get graph statistics (node/edge counts, types)
+- `GET /graph/nodes`: Get filtered nodes
+  - Query params: `node_type`, `limit`, `offset`, `search`
+- `GET /graph/edges`: Get filtered edges
+  - Query params: `source_id`, `target_id`, `edge_type`, `limit`
+
+### Graph Visualization
+The Graph view uses Cytoscape.js for interactive graph visualization:
+- Multiple layout algorithms (force-directed, circle, grid, etc.)
+- Interactive controls (zoom, pan, fit, export)
+- Node and edge styling based on types
+- Real-time graph statistics
+- Export graph as PNG image
+
 ## Environment Configuration
 
 ### Backend

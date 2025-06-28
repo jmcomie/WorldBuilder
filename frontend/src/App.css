@@ -228,10 +228,11 @@
 
 /* In compact mode, account for header height */
 .app-compact .app-main {
-  padding-top: 0;
-  padding-bottom: 0;
+  padding: 0;
   height: calc(100vh - 4rem); /* Subtract approximate header height */
   max-height: calc(100vh - 4rem);
+  align-items: stretch; /* Full width for views */
+  justify-content: stretch;
 }
 
 .status-container {
