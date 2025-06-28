@@ -7,6 +7,20 @@
   z-index: 1;
 }
 
+/* Mobile adjustments for root */
+@media (max-width: 768px) {
+  #root {
+    padding: 1rem;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  #root {
+    padding: 0.5rem;
+  }
+}
+
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -119,6 +133,8 @@
   flex-direction: column;
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .app-header {
@@ -151,6 +167,19 @@
   grid-column: 3;
 }
 
+/* Mobile adjustments for compact header */
+@media (max-width: 480px) {
+  .app-compact .app-header {
+    grid-template-columns: auto 1fr auto;
+    padding: 0.25rem;
+    gap: 0.25rem;
+  }
+  
+  .app-compact .app-header .animated-title {
+    font-size: 1rem;
+  }
+}
+
 /* Title transitions */
 .animated-title {
   cursor: pointer;
@@ -164,6 +193,27 @@
 
 .app-compact .animated-title {
   transform: translateX(0);
+}
+
+/* Mobile adjustments for animated title */
+@media (max-width: 768px) {
+  .animated-title {
+    font-size: 2.5em;
+  }
+  
+  .title-compact {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .animated-title {
+    font-size: 2em;
+  }
+  
+  .title-compact {
+    font-size: 1.2rem;
+  }
 }
 
 /* Main content area */
@@ -219,6 +269,9 @@
   align-items: center;
   justify-content: center;
   gap: 2rem;
+  width: 100%;
+  padding: 0 1rem;
+  box-sizing: border-box;
 }
 
 .home-title {
@@ -233,4 +286,29 @@
   right: 0;
   padding: 2rem;
   text-align: center;
+}
+
+/* Mobile adjustments for footer and status */
+@media (max-width: 768px) {
+  .app-footer {
+    padding: 1rem;
+  }
+  
+  .status-container {
+    font-size: 0.875rem;
+  }
+  
+  .status-container p {
+    margin: 0.25rem 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-footer {
+    padding: 0.5rem;
+  }
+  
+  .status-container {
+    font-size: 0.75rem;
+  }
 }
