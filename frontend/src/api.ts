@@ -20,6 +20,14 @@ export async function createEpisode(episode: EpisodeRequest): Promise<EpisodeRes
 
   if (!response.ok) {
     const error = await response.json();
+    
+    // Provide more specific error messages based on status code
+    if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+    } else if (response.status === 401) {
+      throw new Error('OpenAI API authentication failed. Please check the API key configuration.');
+    }
+    
     throw new Error(error.detail || 'Failed to create episode');
   }
 

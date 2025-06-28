@@ -78,7 +78,22 @@ async def add_episode(episode: EpisodeRequest):
             "episode_id": str(result.uuid) if hasattr(result, 'uuid') else None
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        error_message = str(e)
+        print(f"Error adding episode: {error_message}")
+        
+        # Check for rate limit errors
+        if "rate_limit_exceeded" in error_message.lower() or "rate limit" in error_message.lower():
+            raise HTTPException(
+                status_code=429,
+                detail="Rate limit exceeded. Please try again later."
+            )
+        elif "api_key" in error_message.lower() or "authentication" in error_message.lower():
+            raise HTTPException(
+                status_code=401,
+                detail="OpenAI API authentication failed. Please check your API key."
+            )
+        else:
+            raise HTTPException(status_code=500, detail=error_message)
 
 @app.post("/search")
 async def search_graph(search: SearchRequest):
