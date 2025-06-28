@@ -23,6 +23,19 @@ export const api = {
     return response.json();
   },
 
+  async getGraphWithFacts(params?: { limit?: number; offset?: number }): Promise<GraphResponse> {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.offset) queryParams.append('offset', params.offset.toString());
+
+    const response = await fetch(`${API_URL}/graph/with-facts?${queryParams}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to fetch graph data with facts');
+    }
+    return response.json();
+  },
+
   async getGraphStats(): Promise<GraphStatsResponse> {
     const response = await fetch(`${API_URL}/graph/stats`);
     if (!response.ok) {

@@ -145,37 +145,166 @@ async def get_graph_data(
             if node_type:
                 node_filter = f":{node_type}"
             
-            # Query to get nodes and relationships with pagination
-            result = session.run(f"""
+            # First get nodes
+            nodes_result = session.run(f"""
                 MATCH (n{node_filter})
-                WITH n SKIP $offset LIMIT $limit
-                OPTIONAL MATCH (n)-[r]->(m)
-                WITH n, collect({{
-                    id: elementId(r),
-                    source: elementId(n),
-                    target: elementId(m),
-                    type: type(r),
-                    properties: properties(r)
-                }}) as rels, collect(m) as targets
-                RETURN 
-                    collect(DISTINCT {{
-                        id: elementId(n),
-                        name: n.name,
-                        labels: labels(n),
-                        properties: properties(n)
-                    }}) as nodes,
-                    rels,
-                    targets
+                WHERE n.uuid IS NOT NULL
+                RETURN DISTINCT n
+                SKIP $offset LIMIT $limit
             """, offset=offset, limit=limit)
+            
+            nodes = list(nodes_result)
+            node_ids = [record["n"]["uuid"] for record in nodes if "uuid" in record["n"]]
+            
+            # Then get edges with facts
+            edges_result = session.run("""
+                MATCH (source)-[r]->(target)
+                WHERE source.uuid IN $node_ids 
+                   OR target.uuid IN $node_ids
+                RETURN source, r, target
+                LIMIT 200
+            """, node_ids=node_ids)
+            
+            edges = list(edges_result)
             
             # Process results into Cytoscape format
             cytoscape_nodes = []
             cytoscape_edges = []
             seen_nodes = set()
             
+            # Process nodes
+            for record in nodes:
+                node = record["n"]
+                node_id = node.get("uuid", node.get("name", str(node.id)))
+                if node_id not in seen_nodes:
+                    seen_nodes.add(node_id)
+                    cytoscape_nodes.append({
+                        "data": {
+                            "id": node_id,
+                            "label": node.get("name", "Unknown"),
+                            "type": list(node.labels)[0] if node.labels else "Unknown",
+                            **dict(node)
+                        }
+                    })
+            
+            # Process edges with facts
+            for record in edges:
+                source = record["source"]
+                target = record["target"]
+                rel = record["r"]
+                
+                # Add source and target nodes if not seen
+                source_id = source.get("uuid", source.get("name", str(source.id)))
+                target_id = target.get("uuid", target.get("name", str(target.id)))
+                
+                if source_id not in seen_nodes:
+                    seen_nodes.add(source_id)
+                    cytoscape_nodes.append({
+                        "data": {
+                            "id": source_id,
+                            "label": source.get("name", "Unknown"),
+                            "type": list(source.labels)[0] if source.labels else "Unknown",
+                            **dict(source)
+                        }
+                    })
+                
+                if target_id not in seen_nodes:
+                    seen_nodes.add(target_id)
+                    cytoscape_nodes.append({
+                        "data": {
+                            "id": target_id,
+                            "label": target.get("name", "Unknown"),
+                            "type": list(target.labels)[0] if target.labels else "Unknown",
+                            **dict(target)
+                        }
+                    })
+                
+                # Create edge with fact if available
+                edge_data = {
+                    "id": f"{source_id}-{target_id}-{rel.type}",
+                    "source": source_id,
+                    "target": target_id,
+                    "type": rel.type,
+                    "label": rel.type
+                }
+                
+                # Add fact if it exists
+                if hasattr(rel, "fact") and rel.get("fact"):
+                    edge_data["fact"] = rel.get("fact")
+                elif "fact" in dict(rel):
+                    edge_data["fact"] = dict(rel)["fact"]
+                
+                # Add other properties
+                edge_data.update(dict(rel))
+                
+                cytoscape_edges.append({
+                    "data": edge_data
+                })
+            
+            return {
+                "success": True,
+                "elements": {
+                    "nodes": cytoscape_nodes,
+                    "edges": cytoscape_edges
+                }
+            }
+    except Exception as e:
+        print(f"Error in get_graph_data: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/graph/with-facts")
+async def get_graph_with_facts(
+    limit: int = 100,
+    offset: int = 0
+):
+    """Get graph data with Graphiti facts emphasized"""
+    try:
+        with driver.session() as session:
+            # Query specifically for nodes and fact relationships
+            result = session.run("""
+                // First get nodes that have UUIDs (Graphiti nodes)
+                MATCH (n)
+                WHERE n.uuid IS NOT NULL
+                WITH n
+                SKIP $offset LIMIT $limit
+                
+                // Get all relationships involving these nodes
+                OPTIONAL MATCH (n)-[r]-(m)
+                WHERE m.uuid IS NOT NULL
+                
+                // Return nodes and relationships
+                RETURN 
+                    collect(DISTINCT {
+                        id: COALESCE(n.uuid, toString(id(n))),
+                        name: n.name,
+                        labels: labels(n),
+                        properties: properties(n)
+                    }) as nodes,
+                    collect(DISTINCT {
+                        id: COALESCE(r.uuid, toString(id(r))),
+                        source: COALESCE(startNode(r).uuid, toString(id(startNode(r)))),
+                        target: COALESCE(endNode(r).uuid, toString(id(endNode(r)))),
+                        type: type(r),
+                        fact: r.fact,
+                        properties: properties(r)
+                    }) as relationships,
+                    collect(DISTINCT {
+                        id: COALESCE(m.uuid, toString(id(m))),
+                        name: m.name,
+                        labels: labels(m),
+                        properties: properties(m)
+                    }) as connected_nodes
+            """, offset=offset, limit=limit)
+            
+            # Process results
+            cytoscape_nodes = []
+            cytoscape_edges = []
+            seen_nodes = set()
+            
             for record in result:
-                # Process source nodes
-                for node in record["nodes"]:
+                # Add all nodes
+                all_nodes = record["nodes"] + record["connected_nodes"]
+                for node in all_nodes:
                     if node["id"] not in seen_nodes:
                         seen_nodes.add(node["id"])
                         cytoscape_nodes.append({
@@ -187,45 +316,41 @@ async def get_graph_data(
                             }
                         })
                 
-                # Process relationships and target nodes
-                for i, rel_group in enumerate(record["rels"]):
-                    if isinstance(rel_group, list):
-                        for rel in rel_group:
-                            if rel.get("id"):
-                                cytoscape_edges.append({
-                                    "data": {
-                                        "id": rel["id"],
-                                        "source": rel["source"],
-                                        "target": rel["target"],
-                                        "label": rel["type"],
-                                        **rel.get("properties", {})
-                                    }
-                                })
-                    
-                # Process target nodes
-                for target_group in record["targets"]:
-                    if isinstance(target_group, list):
-                        for target in target_group:
-                            if target and target.get("id") not in seen_nodes:
-                                seen_nodes.add(target["id"])
-                                cytoscape_nodes.append({
-                                    "data": {
-                                        "id": target["id"],
-                                        "label": target.get("name", "Unknown"),
-                                        "type": target["labels"][0] if target.get("labels") else "Unknown",
-                                        **target.get("properties", {})
-                                    }
-                                })
+                # Add relationships with facts
+                for rel in record["relationships"]:
+                    if rel["source"] and rel["target"]:
+                        edge_data = {
+                            "id": rel["id"],
+                            "source": rel["source"],
+                            "target": rel["target"],
+                            "type": rel["type"],
+                            "label": rel["type"]
+                        }
+                        
+                        # Prioritize fact property
+                        if rel.get("fact"):
+                            edge_data["fact"] = rel["fact"]
+                        
+                        # Add other properties
+                        if rel.get("properties"):
+                            edge_data.update(rel["properties"])
+                        
+                        cytoscape_edges.append({"data": edge_data})
             
             return {
                 "success": True,
                 "elements": {
                     "nodes": cytoscape_nodes,
                     "edges": cytoscape_edges
+                },
+                "stats": {
+                    "nodeCount": len(cytoscape_nodes),
+                    "edgeCount": len(cytoscape_edges),
+                    "factsCount": sum(1 for edge in cytoscape_edges if edge["data"].get("fact"))
                 }
             }
     except Exception as e:
-        print(f"Error in get_graph_data: {str(e)}")
+        print(f"Error in get_graph_with_facts: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/graph/stats")
