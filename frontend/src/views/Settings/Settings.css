@@ -1,9 +1,126 @@
-.settings-view {
-  padding: 2rem;
+.settings-container {
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: 0;
 }
 
-.settings-view h2 {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-  color: #eab308;
+/* Sidebar with vertical tabs */
+.settings-sidebar {
+  width: 200px;
+  border-right: 1px solid #e5e7eb;
+  padding: 1.5rem 0;
+  flex-shrink: 0;
+}
+
+.settings-tabs-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0 1rem;
+}
+
+.settings-tab-vertical {
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.settings-tab-vertical:hover {
+  color: #374151;
+  background: #f3f4f6;
+}
+
+.settings-tab-vertical.active {
+  color: #1f2937;
+  background: #eff6ff;
+  font-weight: 600;
+}
+
+.settings-tab-vertical.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: #2563eb;
+  border-radius: 0 2px 2px 0;
+}
+
+/* Content area */
+.settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem 3rem;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .settings-container {
+    flex-direction: column;
+  }
+  
+  .settings-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 1rem 0;
+  }
+  
+  .settings-tabs-vertical {
+    flex-direction: row;
+    padding: 0 1rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 0.5rem;
+  }
+  
+  .settings-tab-vertical {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 0.5rem 1rem;
+  }
+  
+  .settings-tab-vertical.active::before {
+    display: none;
+  }
+  
+  .settings-tab-vertical.active {
+    background: #eff6ff;
+    box-shadow: 0 0 0 1px #dbeafe;
+  }
+  
+  .settings-content {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .settings-sidebar {
+    padding: 0.75rem 0;
+  }
+  
+  .settings-tabs-vertical {
+    padding: 0 0.75rem;
+  }
+  
+  .settings-tab-vertical {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.875rem;
+  }
+  
+  .settings-content {
+    padding: 1rem;
+  }
 }
