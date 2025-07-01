@@ -1,0 +1,359 @@
+/* Pane container */
+.settings-pane {
+  color: #1f2937;
+}
+
+.settings-pane-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: #111827;
+  line-height: 1.2;
+}
+
+/* Sections */
+.settings-section {
+  margin-bottom: 3rem;
+}
+
+.settings-section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+
+.settings-description {
+  color: #6b7280;
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+/* Settings items */
+.settings-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  gap: 2rem;
+}
+
+.settings-item-vertical {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+/* Labels */
+.settings-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.settings-label-text {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.settings-label-description {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+/* Form controls */
+.settings-input,
+.settings-select {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #1f2937;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.15s ease;
+  min-width: 200px;
+}
+
+.settings-input:focus,
+.settings-select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.settings-input-monospace {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-size: 13px;
+}
+
+.settings-input[type="number"] {
+  width: 120px;
+}
+
+.settings-input-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.settings-input-group .settings-input {
+  flex: 1;
+}
+
+/* Checkbox */
+.settings-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  margin-top: 2px;
+  accent-color: #2563eb;
+}
+
+/* Range slider */
+.settings-range {
+  width: 240px;
+  accent-color: #2563eb;
+}
+
+/* Color picker */
+.settings-color-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.settings-color-input {
+  width: 48px;
+  height: 36px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.settings-color-value {
+  font-family: 'SF Mono', Monaco, monospace;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+/* Buttons */
+.settings-button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: #ffffff;
+  color: #1f2937;
+}
+
+.settings-button:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.settings-button-primary {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.settings-button-primary:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.settings-button-secondary {
+  background: #ffffff;
+  color: #1f2937;
+  border-color: #d1d5db;
+}
+
+.settings-button-secondary:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.settings-button-danger {
+  background: #ffffff;
+  color: #dc2626;
+  border-color: #dc2626;
+}
+
+.settings-button-danger:hover {
+  background: #fef2f2;
+  border-color: #b91c1c;
+}
+
+/* Actions */
+.settings-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Alerts */
+.settings-alert {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  align-items: flex-start;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.settings-alert-info {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+.settings-alert-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.settings-alert p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1e40af;
+}
+
+/* Theme preview */
+.settings-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.settings-theme-option {
+  position: relative;
+  cursor: pointer;
+}
+
+.settings-theme-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+}
+
+.settings-theme-preview {
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.15s ease;
+  background: #ffffff;
+}
+
+.settings-theme-option input:checked + .settings-theme-preview {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.settings-theme-option input:disabled + .settings-theme-preview {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.settings-theme-name {
+  display: block;
+  padding: 0.75rem;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  border-bottom: 1px solid #e5e7eb;
+  color: #1f2937;
+}
+
+.settings-theme-sample {
+  padding: 0.75rem;
+  background: #f9fafb;
+}
+
+.settings-theme-bar {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.settings-theme-line {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  margin-bottom: 0.25rem;
+}
+
+.settings-theme-line:last-child {
+  width: 70%;
+}
+
+.settings-theme-dark .settings-theme-sample {
+  background: #1f2937;
+}
+
+.settings-theme-dark .settings-theme-bar {
+  background: #374151;
+}
+
+.settings-theme-dark .settings-theme-line {
+  background: #4b5563;
+}
+
+/* Code blocks */
+.settings-code {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 1rem;
+  font-family: 'SF Mono', Monaco, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+  color: #1f2937;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .settings-pane-title {
+    font-size: 24px;
+  }
+  
+  .settings-section-title {
+    font-size: 16px;
+  }
+  
+  .settings-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  
+  .settings-input,
+  .settings-select,
+  .settings-range {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .settings-actions {
+    flex-direction: column;
+  }
+  
+  .settings-button {
+    width: 100%;
+  }
+}

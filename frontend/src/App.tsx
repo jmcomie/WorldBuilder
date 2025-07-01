@@ -102,6 +102,7 @@ function App() {
           isOpen={isSettingsOpen} 
           onClose={() => setIsSettingsOpen(false)}
           title="Settings"
+          className="overlay-settings"
         >
           <Settings />
         </Overlay>
