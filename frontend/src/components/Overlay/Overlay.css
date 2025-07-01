@@ -175,3 +175,8 @@
     transform: translateY(0);
   }
 }
+
+/* Settings overlay specific styles */
+.overlay-settings {
+  max-width: 900px;
+}
