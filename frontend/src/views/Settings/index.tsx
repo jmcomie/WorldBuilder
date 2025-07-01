@@ -3,9 +3,10 @@ import GeneralPane from './panes/GeneralPane';
 import ApiKeysPane from './panes/ApiKeysPane';
 import AppearancePane from './panes/AppearancePane';
 import AdvancedPane from './panes/AdvancedPane';
+import McpServersPane from './panes/McpServersPane';
 import './Settings.css';
 
-type SettingsTab = 'general' | 'api-keys' | 'appearance' | 'advanced';
+type SettingsTab = 'general' | 'api-keys' | 'appearance' | 'advanced' | 'mcp-servers';
 
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
@@ -15,6 +16,7 @@ const Settings: React.FC = () => {
     { id: 'api-keys' as SettingsTab, label: 'API Keys' },
     { id: 'appearance' as SettingsTab, label: 'Appearance' },
     { id: 'advanced' as SettingsTab, label: 'Advanced' },
+    { id: 'mcp-servers' as SettingsTab, label: 'MCP Servers' },
   ];
 
   const renderActivePane = () => {
@@ -27,6 +29,8 @@ const Settings: React.FC = () => {
         return <AppearancePane />;
       case 'advanced':
         return <AdvancedPane />;
+      case 'mcp-servers':
+        return <McpServersPane />;
       default:
         return <GeneralPane />;
     }
