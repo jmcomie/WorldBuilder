@@ -16,11 +16,13 @@
     "@mui/icons-material": "^7.2.0",
     "@mui/material": "^7.2.0",
     "@types/cytoscape": "^3.21.9",
+    "@types/react-router-dom": "^5.3.3",
     "cytoscape": "^3.32.0",
     "cytoscape-fcose": "^2.2.0",
     "cytoscape-popper": "^4.0.1",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",

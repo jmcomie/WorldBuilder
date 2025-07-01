@@ -1,0 +1,43 @@
+import { createBrowserRouter, Navigate } from 'react-router-dom';
+import App from './App';
+import HomeView from './views/Home';
+import WriteView from './views/Write';
+import GraphView from './views/Graph';
+import PlayView from './views/Play';
+
+export const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <App />,
+    children: [
+      {
+        index: true,
+        element: <HomeView />
+      },
+      {
+        path: 'write',
+        element: <WriteView />
+      },
+      {
+        path: 'graph',
+        element: <GraphView />
+      },
+      {
+        path: 'play',
+        element: <PlayView />
+      },
+      {
+        path: 'settings',
+        element: <Navigate to="/" replace />
+      },
+      {
+        path: 'help',
+        element: <Navigate to="/" replace />
+      },
+      {
+        path: '*',
+        element: <Navigate to="/" replace />
+      }
+    ]
+  }
+]);

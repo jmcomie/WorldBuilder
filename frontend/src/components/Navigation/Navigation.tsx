@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import NavigationItem, { type NavigationItemRef } from './NavigationItem';
 import editVideo from '../../assets/videos/edit.mp4';
 import societyVideo from '../../assets/videos/society.mp4';
@@ -60,6 +61,7 @@ type AnimationPattern = 'simultaneous' | 'left-to-right' | 'right-to-left';
 
 const Navigation: React.FC<NavigationProps> = ({ isCompact, onNavigate, variant = 'full' }) => {
   const itemRefs = useRef<(NavigationItemRef | null)[]>([]);
+  const location = useLocation();
   
   // Filter items based on variant
   const filteredItems = navigationItems.filter(item => {
@@ -126,6 +128,7 @@ const Navigation: React.FC<NavigationProps> = ({ isCompact, onNavigate, variant 
           label={item.label}
           isCompact={isCompact}
           onClick={() => onNavigate(item.view)}
+          isActive={location.pathname === `/${item.view}` || (item.view === 'write' && location.pathname === '/')}
         />
       ))}
     </nav>

@@ -7,6 +7,7 @@ interface NavigationItemProps {
   label: string;
   isCompact: boolean;
   onClick: () => void;
+  isActive?: boolean;
 }
 
 export interface NavigationItemRef {
@@ -14,7 +15,7 @@ export interface NavigationItemRef {
 }
 
 const NavigationItem = forwardRef<NavigationItemRef, NavigationItemProps>(
-  ({ videoSrc, imageSrc, label, isCompact, onClick }, ref) => {
+  ({ videoSrc, imageSrc, label, isCompact, onClick, isActive }, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null);
 
     useImperativeHandle(ref, () => ({
@@ -27,7 +28,7 @@ const NavigationItem = forwardRef<NavigationItemRef, NavigationItemProps>(
     }));
 
     return (
-      <button className="navigation-item" onClick={onClick}>
+      <button className={`navigation-item ${isActive ? 'active' : ''}`} onClick={onClick}>
         <div className="navigation-media">
           {!isCompact ? (
             <video
