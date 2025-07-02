@@ -56,7 +56,7 @@ npm run preview
 
 ### Database Access
 - Neo4j Browser: http://localhost:7475
-- Default credentials: neo4j/worldbuilder (configured in docker-compose.yml)
+- Default credentials: neo4j/WorldBuilder2025! (configured in docker-compose.yml)
 
 ## Architecture Overview
 
@@ -70,14 +70,17 @@ npm run preview
     - `POST /episodes`: Add new episodes to the knowledge graph
     - `POST /search`: Search the knowledge graph using Graphiti
     - `GET /graph`: Retrieve graph data for visualization
+- `backend/main.py`: Placeholder file (not the main entry point)
 
 ### Frontend Structure
-- `frontend/src/App.tsx`: Main React component
+- `frontend/src/App.tsx`: Main React component with routing
 - `frontend/src/api.ts`: API client for backend communication
 - Uses Vite for fast development and building
+- Main views: Home, Write (with Episode/Ideation/Ontology modes), Graph, Play
+- Overlays: Settings (General, Appearance, API Keys, MCP Servers, Advanced), Help
 
 ### Service Communication
-- Frontend (port 3000) → Backend (port 8000) → Neo4j (port 7688)
+- Frontend (port 3000, internally 5173) → Backend (port 8000) → Neo4j (port 7688)
 - All services run in Docker containers with networking configured
 
 ### API Endpoints
@@ -94,6 +97,10 @@ npm run preview
   - Query params: `node_type`, `limit`, `offset`, `search`
 - `GET /graph/edges`: Get filtered edges
   - Query params: `source_id`, `target_id`, `edge_type`, `limit`
+- `GET /graph/with-facts`: Get graph data with Graphiti fact details
+  - Query params: `limit`, `offset`
+- `GET /graph/node-distances/{center_node_uuid}`: Calculate distances from a center node
+  - Path param: `center_node_uuid` - The UUID of the center node
 
 ### Graph Visualization
 The Graph view uses Cytoscape.js for interactive graph visualization:
@@ -110,7 +117,7 @@ Create a `.env` file in the `backend/` directory (use `.env-template` as referen
 ```
 NEO4J_URI=bolt://neo4j:7687
 NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=worldbuilder
+NEO4J_PASSWORD=WorldBuilder2025!
 OPENAI_API_KEY=your_openai_api_key_here
 ```
 
@@ -128,7 +135,7 @@ The OPENAI_API_KEY is required for Graphiti's LLM and embedding capabilities
 
 2. **CORS Configuration**: Backend is configured to accept requests from `http://localhost:3000`. Modify this in `app.py` if frontend URL changes.
 
-3. **Database Connections**: The backend manages Neo4j connections. Always check `/status` endpoint to verify database connectivity.
+3. **Database Connections**: The backend manages Neo4j connections. Check `/` or `/test-neo4j` endpoints to verify database connectivity.
 
 4. **Docker Networking**: Services communicate using Docker service names (e.g., `neo4j`, `backend`) internally, but are exposed on different ports for external access.
 
