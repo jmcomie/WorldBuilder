@@ -10,4 +10,7 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "uvicorn>=0.34.3",
     "graphiti-core>=0.14.0",
+    "mcp>=1.10.1",
+    "anthropic>=0.56.0",
+    "fastmcp>=2.10.1",
 ]
