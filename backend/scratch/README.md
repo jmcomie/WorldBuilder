@@ -9,6 +9,14 @@ This directory is for testing and experimentation. Files here are not part of th
 
 ## Available Test Scripts
 
+
+### Test Interactive MCP Client
+
+#### Example
+```bash
+python mcp_interactive_client.py ../mcp_utilities/servers/demo_server.py
+```
+
 ### test_mcp.py
 Tests MCP (Model Context Protocol) server and client implementations.
 
