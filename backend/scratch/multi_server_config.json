@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "demo_server": {
+      "command": "/Users/justinmcomie/Projects/worldbuilder/backend/.venv/bin/python",
+      "args": ["/Users/justinmcomie/Projects/worldbuilder/backend/mcp_utilities/servers/demo_server.py"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"],
+      "env": {
+        "DISPLAY": ":1"
+      }
+    }
+  }
+}
+
