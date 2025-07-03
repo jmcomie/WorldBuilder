@@ -10,11 +10,34 @@ This directory is for testing and experimentation. Files here are not part of th
 ## Available Test Scripts
 
 
-### Test Interactive MCP Client
+### Interactive MCP Clients
 
-#### Example
+#### Original MCP Interactive Client
+Uses the standard MCP library for direct server interaction:
 ```bash
 python mcp_interactive_client.py ../mcp_utilities/servers/demo_server.py
+```
+
+#### MCP-Use Interactive Client  
+Uses the mcp-use library for simplified interaction with Claude integration:
+```bash
+# Use default demo server
+python mcp_use_interactive_client.py
+
+# Or specify a custom server
+python mcp_use_interactive_client.py ../mcp_utilities/servers/demo_server.py
+```
+
+Features:
+- Natural language queries processed by Claude
+- Automatic tool selection and execution
+- Interactive commands (/tools, /resources, /prompts, /call)
+- Simplified connection and session management
+
+#### Simple MCP-Use Example
+Demonstrates key differences between traditional and mcp-use approaches:
+```bash
+python mcp_use_simple_example.py
 ```
 
 ### test_mcp.py
