@@ -28,7 +28,7 @@ cd backend
 uv sync
 
 # Run backend server with hot-reload
-uv run uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 # Run backend inside Docker (from root directory)
 docker-compose up backend
@@ -61,16 +61,28 @@ npm run preview
 ## Architecture Overview
 
 ### Backend Structure
-- `backend/app.py`: Main FastAPI application
-  - Configures CORS for frontend at localhost:3000
-  - Connects to Neo4j using Bolt protocol
-  - Integrates Graphiti for knowledge graph management
-  - Provides health check endpoints (`/` and `/test-neo4j`)
-  - Knowledge graph endpoints:
-    - `POST /episodes`: Add new episodes to the knowledge graph
-    - `POST /search`: Search the knowledge graph using Graphiti
-    - `GET /graph`: Retrieve graph data for visualization
-- `backend/main.py`: Placeholder file (not the main entry point)
+- `backend/app/`: Main application package (modular architecture)
+  - `main.py`: FastAPI application initialization
+  - `config.py`: Configuration and environment management
+  - `core/`: Core functionality (database, exceptions)
+  - `models/`: Pydantic models for API contracts
+  - `api/routes/`: API endpoints organized by domain
+  - `services/`: Business logic and integrations
+  - `utils/`: Utility functions
+- `backend/mcp/`: MCP (Model Context Protocol) implementation
+  - `servers/`: MCP server implementations
+  - `client/`: Reusable MCP client library
+  - `protocols/`: Protocol type definitions
+- `backend/scratch/`: Testing and experimentation scripts
+- Knowledge graph endpoints:
+  - `POST /episodes`: Add new episodes to the knowledge graph
+  - `POST /search`: Search the knowledge graph using Graphiti
+  - `GET /graph`: Retrieve graph data for visualization
+  - `GET /graph/stats`: Get graph statistics
+  - `GET /graph/nodes`: Get filtered nodes
+  - `GET /graph/edges`: Get filtered edges
+  - `GET /graph/with-facts`: Get graph with Graphiti facts
+  - `GET /graph/node-distances/{uuid}`: Calculate distances from a node
 
 ### Frontend Structure
 - `frontend/src/App.tsx`: Main React component with routing
