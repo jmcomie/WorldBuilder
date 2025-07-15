@@ -92,8 +92,8 @@ class OntologyOutline(OntologicalOutlineBase):
     )
 
 
-@mcp.tool()
-def initialize_ontology_outline(outline: OntologyOutlineInitial) -> dict:
+@mcp.tool
+async def initialize_ontology_outline(outline: OntologyOutlineInitial) -> dict:
     """
     Initialize a new ontology with basic structure and seed entities.
     Call this tool or open an existing outline to start building an ontology.
@@ -104,9 +104,9 @@ def initialize_ontology_outline(outline: OntologyOutlineInitial) -> dict:
     needed.
     """
     # Store the outline and return a unique ID
-    ontology_id = f"{outline.name}"
+    ontology_id = f"{outline.ontology_name}"
 
-    print(f"Initializing ontology outline: {pprint(outline.model_dump())}", file=sys.stderr)
+    #print(f"Initializing ontology outline: {pprint(outline.model_dump())}", file=sys.stderr)
     # review code below
     return {
         "ontology_id": ontology_id,
@@ -188,4 +188,5 @@ def get_remaining():
 
 # Entry point
 if __name__ == "__main__":
+    import sys
     mcp.run()

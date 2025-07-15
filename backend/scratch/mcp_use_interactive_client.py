@@ -48,6 +48,7 @@ import sys
 import os
 import json
 from pathlib import Path
+import tempfile
 import click
 from dotenv import load_dotenv
 from mcp_use import MCPClient, MCPAgent
@@ -116,8 +117,6 @@ async def interactive_loop(agent, client):
         except EOFError:
             print("\n\n👋 Goodbye!")
             break
-        except Exception as e:
-            print(f"\n❌ Unexpected error: {e}\n")
 
 
 def parse_server_path(server_spec):
@@ -182,11 +181,8 @@ def load_servers_from_specs(server_specs):
     for spec in server_specs.split(','):
         spec = spec.strip()
         if spec:
-            try:
-                server_config = create_server_config(spec)
-                servers.update(server_config)
-            except Exception as e:
-                click.echo(f"⚠️  Warning: Failed to load server '{spec}': {e}", err=True)
+            server_config = create_server_config(spec)
+            servers.update(server_config)
     
     return {"mcpServers": servers}
 
@@ -242,13 +238,9 @@ async def main(config_path, server_specs, use_server_manager, max_steps):
         # Load from config file if provided
         if config_path:
             print(f"📄 Loading configuration from {config_path}...")
-            try:
-                with open(config_path, 'r') as f:
-                    file_config = json.load(f)
-                config_dict = merge_server_configs(config_dict, file_config)
-            except Exception as e:
-                print(f"❌ Error loading config file: {e}")
-                sys.exit(1)
+            with open(config_path, 'r') as f:
+                file_config = json.load(f)
+            config_dict = merge_server_configs(config_dict, file_config)
         
         # Load from server specs if provided
         if server_specs:
@@ -265,19 +257,26 @@ async def main(config_path, server_specs, use_server_manager, max_steps):
         print(f"📋 Loaded {len(config_dict['mcpServers'])} server(s):")
         for server_name in config_dict['mcpServers']:
             print(f"   • {server_name}")
-        
+
         # Create client with the merged configuration
         print("\n🚀 Initializing MCP client...")
         LOG.info(f"Config dict: {config_dict}")
         LOG.info(f"Use server manager: {use_server_manager}, Max steps: {max_steps}")
         client = MCPClient.from_dict(config_dict)
+        """
+        with tempfile.NamedTemporaryFile(delete=False, mode="wt") as temp_file:
+            temp_file.write(json.dumps(config_dict))
+            print(f"📂 Temporary config file created at: {temp_file.name}")
+            client = MCPClient.from_config_file(temp_file.name)
+        """
+        assert isinstance(client, MCPClient), "Failed to create MCPClient instance"
         # Create agent with the client
         print("🤖 Setting up AI agent...")
         agent = MCPAgent(
             llm=ChatAnthropic(model="claude-3-5-sonnet-20240620"),
             client=client,
             use_server_manager=use_server_manager,
-            max_steps=max_steps
+            max_steps=max_steps,
         )
 
         print(f"⚙️  Configuration: server_manager={'enabled' if use_server_manager else 'disabled'}, max_steps={max_steps}")
@@ -288,6 +287,7 @@ async def main(config_path, server_specs, use_server_manager, max_steps):
         
     except Exception as e:
         print(f"❌ Failed to initialize: {e}")
+        LOG.exception("Error during initialization")
         sys.exit(1)
     finally:
         # Clean up all sessions
