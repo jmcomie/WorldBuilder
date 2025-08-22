@@ -1,12 +1,17 @@
 import { useState } from 'react';
-import GeneralPane from './panes/GeneralPane';
+import AdvancedPane from './panes/AdvancedPane';
 import ApiKeysPane from './panes/ApiKeysPane';
 import AppearancePane from './panes/AppearancePane';
-import AdvancedPane from './panes/AdvancedPane';
+import GeneralPane from './panes/GeneralPane';
 import McpServersPane from './panes/McpServersPane';
 import './Settings.css';
 
-type SettingsTab = 'general' | 'api-keys' | 'appearance' | 'advanced' | 'mcp-servers';
+type SettingsTab =
+  | 'general'
+  | 'api-keys'
+  | 'appearance'
+  | 'advanced'
+  | 'mcp-servers';
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
@@ -40,7 +45,7 @@ const Settings = () => {
     <div className="settings-container">
       <div className="settings-sidebar">
         <div className="settings-tabs-vertical">
-          {tabs.map(tab => (
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               className={`settings-tab-vertical ${activeTab === tab.id ? 'active' : ''}`}
@@ -51,9 +56,7 @@ const Settings = () => {
           ))}
         </div>
       </div>
-      <div className="settings-content">
-        {renderActivePane()}
-      </div>
+      <div className="settings-content">{renderActivePane()}</div>
     </div>
   );
 };

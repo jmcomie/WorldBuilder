@@ -2,13 +2,17 @@ import { forwardRef } from 'react';
 import type { InputHTMLAttributes } from 'react';
 import './Checkbox.css';
 
-export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
+export interface CheckboxProps
+  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label?: string;
   indeterminate?: boolean;
 }
 
 const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
-  ({ label, indeterminate = false, className = '', ...props }, ref) => {
+  (
+    { label, indeterminate: _indeterminate = false, className = '', ...props },
+    ref
+  ) => {
     return (
       <label className="checkbox-wrapper">
         <input

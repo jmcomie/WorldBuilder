@@ -22,13 +22,18 @@ const NavigationItem = forwardRef<NavigationItemRef, NavigationItemProps>(
       playVideo: () => {
         if (videoRef.current && !isCompact) {
           videoRef.current.currentTime = 0;
-          videoRef.current.play().catch(e => console.error('Video play error:', e));
+          videoRef.current
+            .play()
+            .catch((e) => console.error('Video play error:', e));
         }
-      }
+      },
     }));
 
     return (
-      <button className={`navigation-item ${isActive ? 'active' : ''}`} onClick={onClick}>
+      <button
+        className={`navigation-item ${isActive ? 'active' : ''}`}
+        onClick={onClick}
+      >
         <div className="navigation-media">
           {!isCompact ? (
             <video
@@ -39,11 +44,7 @@ const NavigationItem = forwardRef<NavigationItemRef, NavigationItemProps>(
               playsInline
             />
           ) : (
-            <img
-              className="navigation-image"
-              src={imageSrc}
-              alt={label}
-            />
+            <img className="navigation-image" src={imageSrc} alt={label} />
           )}
         </div>
         <span className="navigation-label">{label}</span>

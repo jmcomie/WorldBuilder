@@ -1,5 +1,8 @@
+import type {
+  GraphResponse,
+  GraphStatsResponse,
+} from './components/GraphVisualization/types';
 import type { EpisodeRequest, EpisodeResponse } from './types/graphiti';
-import type { GraphResponse, GraphStatsResponse } from './components/GraphVisualization/types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -9,7 +12,11 @@ export const api = {
     return response.json();
   },
 
-  async getGraph(params?: { limit?: number; offset?: number; nodeType?: string }): Promise<GraphResponse> {
+  async getGraph(params?: {
+    limit?: number;
+    offset?: number;
+    nodeType?: string;
+  }): Promise<GraphResponse> {
     const queryParams = new URLSearchParams();
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.offset) queryParams.append('offset', params.offset.toString());
@@ -23,7 +30,10 @@ export const api = {
     return response.json();
   },
 
-  async getGraphWithFacts(params?: { limit?: number; offset?: number }): Promise<GraphResponse> {
+  async getGraphWithFacts(params?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<GraphResponse> {
     const queryParams = new URLSearchParams();
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.offset) queryParams.append('offset', params.offset.toString());
@@ -97,16 +107,20 @@ export const api = {
     }>;
     count: number;
   }> {
-    const response = await fetch(`${API_URL}/graph/node-distances/${centerNodeUuid}`);
+    const response = await fetch(
+      `${API_URL}/graph/node-distances/${centerNodeUuid}`
+    );
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || 'Failed to fetch node distances');
     }
     return response.json();
-  }
+  },
 };
 
-export async function createEpisode(episode: EpisodeRequest): Promise<EpisodeResponse> {
+export async function createEpisode(
+  episode: EpisodeRequest
+): Promise<EpisodeResponse> {
   const response = await fetch(`${API_URL}/episodes`, {
     method: 'POST',
     headers: {
@@ -117,14 +131,18 @@ export async function createEpisode(episode: EpisodeRequest): Promise<EpisodeRes
 
   if (!response.ok) {
     const error = await response.json();
-    
+
     // Provide more specific error messages based on status code
     if (response.status === 429) {
-      throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+      throw new Error(
+        'Rate limit exceeded. Please wait a moment and try again.'
+      );
     } else if (response.status === 401) {
-      throw new Error('OpenAI API authentication failed. Please check the API key configuration.');
+      throw new Error(
+        'OpenAI API authentication failed. Please check the API key configuration.'
+      );
     }
-    
+
     throw new Error(error.detail || 'Failed to create episode');
   }
 

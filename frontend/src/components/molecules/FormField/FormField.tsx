@@ -21,13 +21,15 @@ const FormField = ({
   errorMessage,
   htmlFor,
   children,
-  orientation = 'vertical'
+  orientation = 'vertical',
 }: FormFieldProps) => {
   const fieldClasses = [
     'form-field',
     `form-field--${orientation}`,
-    error && 'form-field--error'
-  ].filter(Boolean).join(' ');
+    error && 'form-field--error',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div className={fieldClasses}>

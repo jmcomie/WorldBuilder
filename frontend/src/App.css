@@ -68,9 +68,9 @@
   animation: flowingMap 12s ease-in-out infinite;
   position: relative;
   display: inline-block;
-  
+
   /* Hexagonal grid pattern with flowing colors */
-  background-image: 
+  background-image:
     linear-gradient(
       90deg,
       #1a365d 0%,
@@ -174,7 +174,7 @@
     padding: 0.25rem;
     gap: 0.25rem;
   }
-  
+
   .app-compact .app-header .animated-title {
     font-size: 1rem;
   }
@@ -200,7 +200,7 @@
   .animated-title {
     font-size: 2.5em;
   }
-  
+
   .title-compact {
     font-size: 1.5rem;
   }
@@ -210,7 +210,7 @@
   .animated-title {
     font-size: 2em;
   }
-  
+
   .title-compact {
     font-size: 1.2rem;
   }
@@ -294,11 +294,11 @@
   .app-footer {
     padding: 1rem;
   }
-  
+
   .status-container {
     font-size: 0.875rem;
   }
-  
+
   .status-container p {
     margin: 0.25rem 0;
   }
@@ -308,7 +308,7 @@
   .app-footer {
     padding: 0.5rem;
   }
-  
+
   .status-container {
     font-size: 0.75rem;
   }

@@ -1,9 +1,9 @@
 import { createHashRouter, Navigate } from 'react-router-dom';
 import App from './App';
-import HomeView from './pages/Home';
-import WriteView from './pages/Write';
 import GraphView from './pages/Graph';
+import HomeView from './pages/Home';
 import PlayView from './pages/Play';
+import WriteView from './pages/Write';
 
 export const router = createHashRouter([
   {
@@ -12,32 +12,32 @@ export const router = createHashRouter([
     children: [
       {
         index: true,
-        element: <HomeView />
+        element: <HomeView />,
       },
       {
         path: 'write',
-        element: <WriteView />
+        element: <WriteView />,
       },
       {
         path: 'graph',
-        element: <GraphView />
+        element: <GraphView />,
       },
       {
         path: 'play',
-        element: <PlayView />
+        element: <PlayView />,
       },
       {
         path: 'settings',
-        element: <Navigate to="/" replace />
+        element: <Navigate to="/" replace />,
       },
       {
         path: 'help',
-        element: <Navigate to="/" replace />
+        element: <Navigate to="/" replace />,
       },
       {
         path: '*',
-        element: <Navigate to="/" replace />
-      }
-    ]
-  }
+        element: <Navigate to="/" replace />,
+      },
+    ],
+  },
 ]);

@@ -70,14 +70,14 @@
   .settings-container {
     flex-direction: column;
   }
-  
+
   .settings-sidebar {
     width: 100%;
     border-right: none;
     border-bottom: 1px solid #e5e7eb;
     padding: 1rem 0;
   }
-  
+
   .settings-tabs-vertical {
     flex-direction: row;
     padding: 0 1rem;
@@ -85,22 +85,22 @@
     -webkit-overflow-scrolling: touch;
     gap: 0.5rem;
   }
-  
+
   .settings-tab-vertical {
     flex: 0 0 auto;
     white-space: nowrap;
     padding: 0.5rem 1rem;
   }
-  
+
   .settings-tab-vertical.active::before {
     display: none;
   }
-  
+
   .settings-tab-vertical.active {
     background: #eff6ff;
     box-shadow: 0 0 0 1px #dbeafe;
   }
-  
+
   .settings-content {
     padding: 1.5rem;
   }
@@ -110,16 +110,16 @@
   .settings-sidebar {
     padding: 0.75rem 0;
   }
-  
+
   .settings-tabs-vertical {
     padding: 0 0.75rem;
   }
-  
+
   .settings-tab-vertical {
     padding: 0.4rem 0.75rem;
     font-size: 0.875rem;
   }
-  
+
   .settings-content {
     padding: 1rem;
   }

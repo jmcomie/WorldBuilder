@@ -24,20 +24,14 @@ const Button = ({
     `button--${size}`,
     fullWidth && 'button--full-width',
     loading && 'button--loading',
-    className
-  ].filter(Boolean).join(' ');
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <button
-      className={buttonClasses}
-      disabled={disabled || loading}
-      {...props}
-    >
-      {loading ? (
-        <span className="button__spinner">Loading...</span>
-      ) : (
-        children
-      )}
+    <button className={buttonClasses} disabled={disabled || loading} {...props}>
+      {loading ? <span className="button__spinner">Loading...</span> : children}
     </button>
   );
 };

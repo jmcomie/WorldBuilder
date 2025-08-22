@@ -1,16 +1,16 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import NavigationItem, { type NavigationItemRef } from './NavigationItem';
-import editVideo from '../../../assets/videos/edit.mp4';
-import societyVideo from '../../../assets/videos/society.mp4';
-import jackInTheBoxVideo from '../../../assets/videos/jack-in-the-box.mp4';
-import settingsVideo from '../../../assets/videos/settings.mp4';
-import groundhogDayVideo from '../../../assets/videos/groundhog-day.mp4';
 import editImage from '../../../assets/images/edit.png';
-import societyImage from '../../../assets/images/society.png';
+import groundhogDayImage from '../../../assets/images/groundhog-day.png';
 import jackInTheBoxImage from '../../../assets/images/jack-in-the-box.png';
 import settingsImage from '../../../assets/images/settings.png';
-import groundhogDayImage from '../../../assets/images/groundhog-day.png';
+import societyImage from '../../../assets/images/society.png';
+import editVideo from '../../../assets/videos/edit.mp4';
+import groundhogDayVideo from '../../../assets/videos/groundhog-day.mp4';
+import jackInTheBoxVideo from '../../../assets/videos/jack-in-the-box.mp4';
+import settingsVideo from '../../../assets/videos/settings.mp4';
+import societyVideo from '../../../assets/videos/society.mp4';
+import NavigationItem, { type NavigationItemRef } from './NavigationItem';
 import './Navigation.css';
 
 interface NavigationProps {
@@ -59,12 +59,16 @@ const navigationItems = [
 
 type AnimationPattern = 'simultaneous' | 'left-to-right' | 'right-to-left';
 
-const Navigation = ({ isCompact, onNavigate, variant = 'full' }: NavigationProps) => {
+const Navigation = ({
+  isCompact,
+  onNavigate,
+  variant = 'full',
+}: NavigationProps) => {
   const itemRefs = useRef<(NavigationItemRef | null)[]>([]);
   const location = useLocation();
-  
+
   // Filter items based on variant
-  const filteredItems = navigationItems.filter(item => {
+  const filteredItems = navigationItems.filter((item) => {
     if (variant === 'full') return true;
     if (variant === 'main') return ['write', 'graph', 'play'].includes(item.id);
     if (variant === 'utility') return ['help', 'settings'].includes(item.id);
@@ -73,7 +77,7 @@ const Navigation = ({ isCompact, onNavigate, variant = 'full' }: NavigationProps
 
   const calculateDelays = (pattern: AnimationPattern): number[] => {
     const count = filteredItems.length;
-    
+
     switch (pattern) {
       case 'simultaneous':
         return new Array(count).fill(0);
@@ -88,7 +92,7 @@ const Navigation = ({ isCompact, onNavigate, variant = 'full' }: NavigationProps
 
   const playAnimations = (pattern: AnimationPattern = 'simultaneous') => {
     const delays = calculateDelays(pattern);
-    
+
     itemRefs.current.forEach((ref, index) => {
       if (ref) {
         const delay = delays[index];
@@ -103,32 +107,41 @@ const Navigation = ({ isCompact, onNavigate, variant = 'full' }: NavigationProps
     if (!isCompact) {
       // Play on mount
       playAnimations('left-to-right');
-      
+
       // Set up interval
       const interval = setInterval(() => {
-        const patterns: AnimationPattern[] = ['simultaneous', 'left-to-right', 'right-to-left'];
+        const patterns: AnimationPattern[] = [
+          'simultaneous',
+          'left-to-right',
+          'right-to-left',
+        ];
         const pattern = patterns[Math.floor(Math.random() * patterns.length)];
         playAnimations(pattern);
       }, 10000);
-      
+
       return () => clearInterval(interval);
     }
   }, [isCompact]);
 
   const className = `navigation ${isCompact ? 'navigation-compact' : ''} navigation-${variant}`;
-  
+
   return (
     <nav className={className}>
       {filteredItems.map((item, index) => (
         <NavigationItem
           key={item.id}
-          ref={el => { itemRefs.current[index] = el; }}
+          ref={(el) => {
+            itemRefs.current[index] = el;
+          }}
           videoSrc={item.videoSrc}
           imageSrc={item.imageSrc}
           label={item.label}
           isCompact={isCompact}
           onClick={() => onNavigate(item.view)}
-          isActive={location.pathname === `/${item.view}` || (item.view === 'write' && location.pathname === '/')}
+          isActive={
+            location.pathname === `/${item.view}` ||
+            (item.view === 'write' && location.pathname === '/')
+          }
         />
       ))}
     </nav>

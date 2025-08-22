@@ -9,21 +9,32 @@ interface OverlayProps {
   className?: string;
 }
 
-const Overlay = ({ isOpen, onClose, title, children, className }: OverlayProps) => {
+const Overlay = ({
+  isOpen,
+  onClose,
+  title,
+  children,
+  className,
+}: OverlayProps) => {
   if (!isOpen) return null;
 
   return (
     <div className="overlay-backdrop" onClick={onClose}>
-      <div className={`overlay-content ${className || ''}`} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={`overlay-content ${className || ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="overlay-header">
           <h2>{title}</h2>
-          <button className="overlay-close" onClick={onClose} aria-label="Close">
+          <button
+            className="overlay-close"
+            onClick={onClose}
+            aria-label="Close"
+          >
             ×
           </button>
         </div>
-        <div className="overlay-body">
-          {children}
-        </div>
+        <div className="overlay-body">{children}</div>
       </div>
     </div>
   );

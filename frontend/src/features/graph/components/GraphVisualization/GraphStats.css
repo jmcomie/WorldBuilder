@@ -1,43 +1,43 @@
 .graph-stats {
-    display: flex;
-    gap: 20px;
-    padding: 10px 20px;
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 20px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .graph-stats.loading {
-    opacity: 0.7;
+  opacity: 0.7;
 }
 
 .stat-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .stat-label {
-    font-size: 14px;
-    color: #666;
-    font-weight: 500;
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
 }
 
 .stat-value {
-    font-size: 16px;
-    font-weight: 600;
-    color: #333;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
 }
 
 @media (max-width: 768px) {
-    .graph-stats {
-        flex-direction: column;
-        gap: 10px;
-        padding: 10px;
-    }
-    
-    .stat-item {
-        justify-content: space-between;
-        width: 100%;
-    }
+  .graph-stats {
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .stat-item {
+    justify-content: space-between;
+    width: 100%;
+  }
 }

@@ -51,22 +51,22 @@ const EpisodeForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    
+
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    
+
     try {
       const episodeData: EpisodeRequest = {
         name: name.trim(),
         content: content.trim(),
         source_description: sourceDescription.trim() || undefined,
       };
-      
+
       await createEpisode(episodeData);
       setSuccess(true);
       resetForm();
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
@@ -79,20 +79,20 @@ const EpisodeForm = () => {
   return (
     <div className="episode-form-container">
       <h2>Create New Episode</h2>
-      
+
       {error && (
         <div className="error-message">
           {error}
-          <button onClick={() => setError(null)} className="close-button">×</button>
+          <button onClick={() => setError(null)} className="close-button">
+            ×
+          </button>
         </div>
       )}
-      
+
       {success && (
-        <div className="success-message">
-          Episode created successfully!
-        </div>
+        <div className="success-message">Episode created successfully!</div>
       )}
-      
+
       <form onSubmit={handleSubmit}>
         <div className="form-field">
           <label htmlFor="episode-name">
@@ -120,9 +120,7 @@ const EpisodeForm = () => {
             placeholder="Enter episode content (minimum 10 characters)"
             rows={8}
           />
-          <div className="char-count">
-            {content.length} characters
-          </div>
+          <div className="char-count">{content.length} characters</div>
         </div>
 
         <div className="form-field">
@@ -140,16 +138,16 @@ const EpisodeForm = () => {
         </div>
 
         <div className="form-actions">
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={isSubmitting}
             className="submit-button"
           >
             {isSubmitting ? 'Creating...' : 'Create Episode'}
           </button>
-          
-          <button 
-            type="button" 
+
+          <button
+            type="button"
             onClick={resetForm}
             disabled={isSubmitting}
             className="reset-button"

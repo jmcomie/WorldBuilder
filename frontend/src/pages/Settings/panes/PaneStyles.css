@@ -91,7 +91,7 @@
   font-size: 13px;
 }
 
-.settings-input[type="number"] {
+.settings-input[type='number'] {
   width: 120px;
 }
 
@@ -245,7 +245,7 @@
   cursor: pointer;
 }
 
-.settings-theme-option input[type="radio"] {
+.settings-theme-option input[type='radio'] {
   position: absolute;
   opacity: 0;
 }
@@ -331,28 +331,28 @@
   .settings-pane-title {
     font-size: 24px;
   }
-  
+
   .settings-section-title {
     font-size: 16px;
   }
-  
+
   .settings-item {
     flex-direction: column;
     align-items: stretch;
     gap: 0.75rem;
   }
-  
+
   .settings-input,
   .settings-select,
   .settings-range {
     width: 100%;
     min-width: auto;
   }
-  
+
   .settings-actions {
     flex-direction: column;
   }
-  
+
   .settings-button {
     width: 100%;
   }

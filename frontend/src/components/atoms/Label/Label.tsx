@@ -7,13 +7,13 @@ export interface LabelProps extends LabelHTMLAttributes<HTMLLabelElement> {
   required?: boolean;
 }
 
-const Label = ({ 
-  text, 
-  description, 
-  required = false, 
-  className = '', 
+const Label = ({
+  text,
+  description,
+  required = false,
+  className = '',
   children,
-  ...props 
+  ...props
 }: LabelProps) => {
   return (
     <label className={`label ${className}`} {...props}>

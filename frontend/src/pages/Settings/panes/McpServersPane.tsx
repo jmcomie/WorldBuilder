@@ -16,10 +16,14 @@ const McpServersPane = () => {
       id: '1',
       name: 'filesystem',
       command: 'npx',
-      args: ['-y', '@modelcontextprotocol/server-filesystem', '/Users/username/Documents'],
+      args: [
+        '-y',
+        '@modelcontextprotocol/server-filesystem',
+        '/Users/username/Documents',
+      ],
       env: {},
-      enabled: true
-    }
+      enabled: true,
+    },
   ]);
   const [editingServer, setEditingServer] = useState<McpServer | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -31,7 +35,7 @@ const McpServersPane = () => {
       command: '',
       args: [],
       env: {},
-      enabled: true
+      enabled: true,
     };
     setEditingServer(newServer);
     setIsAddingNew(true);
@@ -42,7 +46,9 @@ const McpServersPane = () => {
       if (isAddingNew) {
         setServers([...servers, editingServer]);
       } else {
-        setServers(servers.map(s => s.id === editingServer.id ? editingServer : s));
+        setServers(
+          servers.map((s) => (s.id === editingServer.id ? editingServer : s))
+        );
       }
       setEditingServer(null);
       setIsAddingNew(false);
@@ -50,7 +56,7 @@ const McpServersPane = () => {
   };
 
   const handleDeleteServer = (id: string) => {
-    setServers(servers.filter(s => s.id !== id));
+    setServers(servers.filter((s) => s.id !== id));
   };
 
   const handleCancelEdit = () => {
@@ -67,34 +73,54 @@ const McpServersPane = () => {
   return (
     <div className="settings-pane">
       <h3 className="settings-pane-title">MCP Servers</h3>
-      
+
       <div className="settings-alert settings-alert-info">
         <span className="settings-alert-icon">ℹ️</span>
-        <p>Model Context Protocol (MCP) servers enable AI models to connect to external data sources and tools. Configure servers to extend AI capabilities with custom integrations.</p>
+        <p>
+          Model Context Protocol (MCP) servers enable AI models to connect to
+          external data sources and tools. Configure servers to extend AI
+          capabilities with custom integrations.
+        </p>
       </div>
 
       <div className="settings-section">
         <h4 className="settings-section-title">Configured Servers</h4>
-        
+
         {servers.length === 0 && !editingServer && (
-          <p className="settings-description">No MCP servers configured. Add a server to get started.</p>
+          <p className="settings-description">
+            No MCP servers configured. Add a server to get started.
+          </p>
         )}
 
-        {servers.map(server => (
+        {servers.map((server) => (
           <div key={server.id} className="settings-item settings-item-vertical">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
               <div className="settings-label">
-                <span className="settings-label-text">{server.name || 'Unnamed Server'}</span>
-                <span className="settings-label-description">{server.command} {server.args.join(' ')}</span>
+                <span className="settings-label-text">
+                  {server.name || 'Unnamed Server'}
+                </span>
+                <span className="settings-label-description">
+                  {server.command} {server.args.join(' ')}
+                </span>
               </div>
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <div
+                style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}
+              >
                 <input
                   type="checkbox"
                   className="settings-checkbox"
                   checked={server.enabled}
                   onChange={(e) => {
-                    const updatedServers = servers.map(s => 
-                      s.id === server.id ? { ...s, enabled: e.target.checked } : s
+                    const updatedServers = servers.map((s) =>
+                      s.id === server.id
+                        ? { ...s, enabled: e.target.checked }
+                        : s
                     );
                     setServers(updatedServers);
                   }}
@@ -120,15 +146,25 @@ const McpServersPane = () => {
         ))}
 
         {editingServer && (
-          <div className="settings-section" style={{ marginTop: '2rem', padding: '1.5rem', background: '#f9fafb', borderRadius: '8px' }}>
+          <div
+            className="settings-section"
+            style={{
+              marginTop: '2rem',
+              padding: '1.5rem',
+              background: '#f9fafb',
+              borderRadius: '8px',
+            }}
+          >
             <h4 className="settings-section-title">
               {isAddingNew ? 'Add New Server' : 'Edit Server'}
             </h4>
-            
+
             <div className="settings-item settings-item-vertical">
               <label className="settings-label">
                 <span className="settings-label-text">Server Name</span>
-                <span className="settings-label-description">A unique identifier for this server</span>
+                <span className="settings-label-description">
+                  A unique identifier for this server
+                </span>
               </label>
               <input
                 type="text"
@@ -142,13 +178,17 @@ const McpServersPane = () => {
             <div className="settings-item settings-item-vertical">
               <label className="settings-label">
                 <span className="settings-label-text">Command</span>
-                <span className="settings-label-description">The executable to run (e.g., npx, python, node)</span>
+                <span className="settings-label-description">
+                  The executable to run (e.g., npx, python, node)
+                </span>
               </label>
               <input
                 type="text"
                 className="settings-input settings-input-monospace"
                 value={editingServer.command}
-                onChange={(e) => updateEditingServer({ command: e.target.value })}
+                onChange={(e) =>
+                  updateEditingServer({ command: e.target.value })
+                }
                 placeholder="e.g., npx, python, /usr/local/bin/mcp-server"
               />
             </div>
@@ -156,14 +196,18 @@ const McpServersPane = () => {
             <div className="settings-item settings-item-vertical">
               <label className="settings-label">
                 <span className="settings-label-text">Arguments</span>
-                <span className="settings-label-description">Command-line arguments (one per line)</span>
+                <span className="settings-label-description">
+                  Command-line arguments (one per line)
+                </span>
               </label>
               <textarea
                 className="settings-input settings-input-monospace"
                 rows={4}
                 value={editingServer.args.join('\n')}
                 onChange={(e) => {
-                  const args = e.target.value.split('\n').filter(arg => arg.trim());
+                  const args = e.target.value
+                    .split('\n')
+                    .filter((arg) => arg.trim());
                   updateEditingServer({ args });
                 }}
                 placeholder="-y&#10;@modelcontextprotocol/server-filesystem&#10;/path/to/directory"
@@ -172,16 +216,22 @@ const McpServersPane = () => {
 
             <div className="settings-item settings-item-vertical">
               <label className="settings-label">
-                <span className="settings-label-text">Environment Variables</span>
-                <span className="settings-label-description">Key=value pairs (one per line)</span>
+                <span className="settings-label-text">
+                  Environment Variables
+                </span>
+                <span className="settings-label-description">
+                  Key=value pairs (one per line)
+                </span>
               </label>
               <textarea
                 className="settings-input settings-input-monospace"
                 rows={3}
-                value={Object.entries(editingServer.env).map(([k, v]) => `${k}=${v}`).join('\n')}
+                value={Object.entries(editingServer.env)
+                  .map(([k, v]) => `${k}=${v}`)
+                  .join('\n')}
                 onChange={(e) => {
                   const env: Record<string, string> = {};
-                  e.target.value.split('\n').forEach(line => {
+                  e.target.value.split('\n').forEach((line) => {
                     const [key, ...valueParts] = line.split('=');
                     if (key?.trim()) {
                       env[key.trim()] = valueParts.join('=').trim();
@@ -225,22 +275,14 @@ const McpServersPane = () => {
       <div className="settings-section">
         <h4 className="settings-section-title">Common Server Examples</h4>
         <div className="settings-code">
-# Filesystem Server
-npx -y @modelcontextprotocol/server-filesystem /path/to/directory
-
-# GitHub Server  
-npx -y @modelcontextprotocol/server-github
-# Requires: GITHUB_PERSONAL_ACCESS_TOKEN environment variable
-
-# Brave Search Server
-npx -y @modelcontextprotocol/server-brave-search  
-# Requires: BRAVE_API_KEY environment variable
-
-# Python Server
-python /path/to/server.py --option value
-
-# Node.js Server
-node /path/to/server.js --config /path/to/config.json
+          # Filesystem Server npx -y @modelcontextprotocol/server-filesystem
+          /path/to/directory # GitHub Server npx -y
+          @modelcontextprotocol/server-github # Requires:
+          GITHUB_PERSONAL_ACCESS_TOKEN environment variable # Brave Search
+          Server npx -y @modelcontextprotocol/server-brave-search # Requires:
+          BRAVE_API_KEY environment variable # Python Server python
+          /path/to/server.py --option value # Node.js Server node
+          /path/to/server.js --config /path/to/config.json
         </div>
       </div>
     </div>

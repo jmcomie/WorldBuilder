@@ -5,7 +5,7 @@ const ApiKeysPane = () => {
   const [showOpenAIKey, setShowOpenAIKey] = useState(false);
   const [openAIKey, setOpenAIKey] = useState('');
 
-  const maskApiKey = (key: string) => {
+  const _maskApiKey = (key: string) => {
     if (!key) return '';
     if (key.length <= 8) return '•'.repeat(key.length);
     return key.slice(0, 4) + '•'.repeat(key.length - 8) + key.slice(-4);
@@ -14,13 +14,13 @@ const ApiKeysPane = () => {
   return (
     <div className="settings-pane">
       <h3 className="settings-pane-title">API Keys</h3>
-      
+
       <section className="settings-section">
         <div className="settings-alert settings-alert-info">
           <span className="settings-alert-icon">ℹ️</span>
           <p>API keys are stored locally and never sent to our servers.</p>
         </div>
-        
+
         <div className="settings-item settings-item-vertical">
           <label className="settings-label">
             <span className="settings-label-text">OpenAI API Key</span>
@@ -36,7 +36,7 @@ const ApiKeysPane = () => {
               value={openAIKey}
               onChange={(e) => setOpenAIKey(e.target.value)}
             />
-            <button 
+            <button
               className="settings-button settings-button-secondary"
               onClick={() => setShowOpenAIKey(!showOpenAIKey)}
             >
@@ -44,7 +44,7 @@ const ApiKeysPane = () => {
             </button>
           </div>
         </div>
-        
+
         <div className="settings-item">
           <label className="settings-label">
             <span className="settings-label-text">Model</span>
@@ -59,14 +59,14 @@ const ApiKeysPane = () => {
           </select>
         </div>
       </section>
-      
+
       <section className="settings-section">
         <h4 className="settings-section-title">Other Services</h4>
         <p className="settings-description">
           Additional API integrations will be available here in future updates.
         </p>
       </section>
-      
+
       <div className="settings-actions">
         <button className="settings-button settings-button-primary">
           Save API Keys

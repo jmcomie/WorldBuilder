@@ -1,4 +1,10 @@
-import React, { useState } from 'react';
+import {
+  Psychology,
+  Lightbulb,
+  Book,
+  Send as SendIcon,
+  ContentCopy,
+} from '@mui/icons-material';
 import {
   Box,
   Paper,
@@ -10,9 +16,9 @@ import {
   TextField,
   CircularProgress,
   IconButton,
-  Divider
+  Divider,
 } from '@mui/material';
-import { Psychology, Lightbulb, Book, Send as SendIcon, ContentCopy } from '@mui/icons-material';
+import React, { useState } from 'react';
 
 interface Message {
   id: string;
@@ -27,15 +33,21 @@ const IdeationMode = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const suggestedPrompts = [
-    { icon: <Psychology />, text: "Help me create a unique magic system" },
-    { icon: <Lightbulb />, text: "I need ideas for a mysterious ancient civilization" },
-    { icon: <Book />, text: "Create an interesting character with a complex backstory" }
+    { icon: <Psychology />, text: 'Help me create a unique magic system' },
+    {
+      icon: <Lightbulb />,
+      text: 'I need ideas for a mysterious ancient civilization',
+    },
+    {
+      icon: <Book />,
+      text: 'Create an interesting character with a complex backstory',
+    },
   ];
 
   const generateResponse = async (userQuery: string): Promise<string> => {
     // Simulate AI thinking time
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     // Generate mock response based on context
     if (userQuery.toLowerCase().includes('character')) {
       return `Here's an idea for a character in your world:
@@ -74,7 +86,10 @@ Magic in your world could work through harmonic resonance with natural elements.
 - Certain materials (like lead or obsidian) block resonance
 
 **Training**: Mages must spend years learning to "hear" the frequencies of nature through meditation and practice.`;
-    } else if (userQuery.toLowerCase().includes('location') || userQuery.toLowerCase().includes('place')) {
+    } else if (
+      userQuery.toLowerCase().includes('location') ||
+      userQuery.toLowerCase().includes('place')
+    ) {
       return `Here's a unique location for your world:
 
 **The Floating Gardens of Memoriam**
@@ -117,10 +132,10 @@ What aspect of your world would you like to explore?`;
       id: Date.now().toString(),
       role: 'user',
       content: inputValue,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
 
@@ -130,9 +145,9 @@ What aspect of your world would you like to explore?`;
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: response,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error generating response:', error);
     } finally {
@@ -156,13 +171,20 @@ What aspect of your world would you like to explore?`;
   };
 
   return (
-    <Paper elevation={0} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Paper
+      elevation={0}
+      sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+    >
       <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-        <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography
+          variant="h5"
+          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+        >
           <Psychology /> Ideation Assistant
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Brainstorm and develop creative ideas for your world with AI assistance
+          Brainstorm and develop creative ideas for your world with AI
+          assistance
         </Typography>
       </Box>
 
@@ -174,15 +196,22 @@ What aspect of your world would you like to explore?`;
               Welcome to Ideation Mode
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              I'm here to help you brainstorm and develop creative ideas for your worldbuilding project.
+              I'm here to help you brainstorm and develop creative ideas for
+              your worldbuilding project.
             </Typography>
-            
-            <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" sx={{ mt: 3, mb: 2 }}>
+
+            <Stack
+              direction="row"
+              spacing={1}
+              justifyContent="center"
+              flexWrap="wrap"
+              sx={{ mt: 3, mb: 2 }}
+            >
               <Typography variant="body2" color="text.secondary">
                 Try one of these:
               </Typography>
             </Stack>
-            
+
             <Stack spacing={1} sx={{ maxWidth: 600, mx: 'auto' }}>
               {suggestedPrompts.map((prompt, index) => (
                 <Chip
@@ -191,14 +220,14 @@ What aspect of your world would you like to explore?`;
                   label={prompt.text}
                   onClick={() => handlePromptClick(prompt.text)}
                   variant="outlined"
-                  sx={{ 
+                  sx={{
                     justifyContent: 'flex-start',
                     height: 'auto',
                     padding: '8px 12px',
                     '& .MuiChip-label': {
                       whiteSpace: 'normal',
-                      textAlign: 'left'
-                    }
+                      textAlign: 'left',
+                    },
                   }}
                 />
               ))}
@@ -211,28 +240,40 @@ What aspect of your world would you like to explore?`;
                 key={message.id}
                 sx={{
                   display: 'flex',
-                  justifyContent: message.role === 'user' ? 'flex-end' : 'flex-start'
+                  justifyContent:
+                    message.role === 'user' ? 'flex-end' : 'flex-start',
                 }}
               >
                 <Paper
                   sx={{
                     p: 2,
                     maxWidth: '80%',
-                    bgcolor: message.role === 'user' ? 'primary.light' : 'grey.100',
-                    color: message.role === 'user' ? 'primary.contrastText' : 'text.primary',
-                    position: 'relative'
+                    bgcolor:
+                      message.role === 'user' ? 'primary.light' : 'grey.100',
+                    color:
+                      message.role === 'user'
+                        ? 'primary.contrastText'
+                        : 'text.primary',
+                    position: 'relative',
                   }}
                 >
                   <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
                     {message.content}
                   </Typography>
-                  <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Box
+                    sx={{
+                      mt: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
                     <Typography variant="caption" sx={{ opacity: 0.7 }}>
                       {message.timestamp.toLocaleTimeString()}
                     </Typography>
                     {message.role === 'assistant' && (
-                      <IconButton 
-                        size="small" 
+                      <IconButton
+                        size="small"
                         onClick={() => handleCopyMessage(message.content)}
                         sx={{ ml: 1 }}
                       >
@@ -269,8 +310,8 @@ What aspect of your world would you like to explore?`;
             disabled={isLoading}
             sx={{
               '& .MuiOutlinedInput-root': {
-                borderRadius: 2
-              }
+                borderRadius: 2,
+              },
             }}
           />
           <Button
@@ -283,10 +324,11 @@ What aspect of your world would you like to explore?`;
             Send
           </Button>
         </Box>
-        
+
         <Alert severity="info" sx={{ mt: 2 }}>
           <Typography variant="body2">
-            <strong>Tip:</strong> You can export interesting ideas to the Episode mode to develop them further.
+            <strong>Tip:</strong> You can export interesting ideas to the
+            Episode mode to develop them further.
           </Typography>
         </Alert>
       </Box>

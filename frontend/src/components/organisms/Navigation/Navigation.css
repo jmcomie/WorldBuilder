@@ -75,28 +75,27 @@
   opacity: 0;
   transform: translateY(10px);
   transition: all 0.3s ease;
-  
+
   /* Animated gradient text effect like worldbuilder title */
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-size: 400% 100%;
   background-position: 0% 50%;
-  background-image: 
-    linear-gradient(
-      90deg,
-      #1a365d 0%,
-      #2563eb 10%,
-      #0891b2 20%,
-      #059669 30%,
-      #84cc16 40%,
-      #eab308 50%,
-      #dc2626 60%,
-      #059669 70%,
-      #0891b2 80%,
-      #2563eb 90%,
-      #1a365d 100%
-    );
+  background-image: linear-gradient(
+    90deg,
+    #1a365d 0%,
+    #2563eb 10%,
+    #0891b2 20%,
+    #059669 30%,
+    #84cc16 40%,
+    #eab308 50%,
+    #dc2626 60%,
+    #059669 70%,
+    #0891b2 80%,
+    #2563eb 90%,
+    #1a365d 100%
+  );
   animation: flowingMapLabel 8s ease-in-out infinite;
 }
 
@@ -131,20 +130,20 @@
   .navigation {
     gap: 1.5rem;
   }
-  
+
   .navigation-media {
     width: 60px;
     height: 60px;
   }
-  
+
   .navigation-label {
     font-size: 0.875rem;
   }
-  
+
   .navigation-compact {
     gap: 0.5rem;
   }
-  
+
   .navigation-compact .navigation-media {
     width: 28px;
     height: 28px;
@@ -157,16 +156,16 @@
     flex-wrap: wrap;
     justify-content: center;
   }
-  
+
   .navigation-media {
     width: 50px;
     height: 50px;
   }
-  
+
   .navigation-compact.navigation-main {
     margin: 0 0.5rem;
   }
-  
+
   .navigation-compact .navigation-media {
     width: 24px;
     height: 24px;

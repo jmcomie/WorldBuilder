@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { Send, CheckCircle, Cancel, Edit, Schema } from '@mui/icons-material';
 import {
   Box,
   Paper,
@@ -16,15 +16,9 @@ import {
   Divider,
   Alert,
   Stack,
-  Grid
+  Grid,
 } from '@mui/material';
-import {
-  Send,
-  CheckCircle,
-  Cancel,
-  Edit,
-  Schema
-} from '@mui/icons-material';
+import React, { useState } from 'react';
 
 interface Entity {
   id: string;
@@ -64,10 +58,10 @@ const OntologyMode = () => {
       id: Date.now().toString(),
       role: 'user',
       content: inputMessage,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInputMessage('');
     setIsProcessing(true);
 
@@ -77,46 +71,84 @@ const OntologyMode = () => {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: `I've analyzed your description and identified the following entities and relationships:`,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
       // Simulate extracted entities
       const newEntities: Entity[] = [
-        { id: '1', name: 'Arthur', type: 'Person', confidence: 0.95, status: 'pending' },
-        { id: '2', name: 'Excalibur', type: 'Artifact', confidence: 0.98, status: 'pending' },
-        { id: '3', name: 'Camelot', type: 'Location', confidence: 0.92, status: 'pending' }
+        {
+          id: '1',
+          name: 'Arthur',
+          type: 'Person',
+          confidence: 0.95,
+          status: 'pending',
+        },
+        {
+          id: '2',
+          name: 'Excalibur',
+          type: 'Artifact',
+          confidence: 0.98,
+          status: 'pending',
+        },
+        {
+          id: '3',
+          name: 'Camelot',
+          type: 'Location',
+          confidence: 0.92,
+          status: 'pending',
+        },
       ];
 
       // Simulate extracted relationships
       const newRelationships: Relationship[] = [
-        { id: '1', source: 'Arthur', target: 'Excalibur', type: 'WIELDS', confidence: 0.96, status: 'pending' },
-        { id: '2', source: 'Arthur', target: 'Camelot', type: 'RULES', confidence: 0.93, status: 'pending' }
+        {
+          id: '1',
+          source: 'Arthur',
+          target: 'Excalibur',
+          type: 'WIELDS',
+          confidence: 0.96,
+          status: 'pending',
+        },
+        {
+          id: '2',
+          source: 'Arthur',
+          target: 'Camelot',
+          type: 'RULES',
+          confidence: 0.93,
+          status: 'pending',
+        },
       ];
 
-      setMessages(prev => [...prev, assistantMessage]);
-      setEntities(prev => [...prev, ...newEntities]);
-      setRelationships(prev => [...prev, ...newRelationships]);
+      setMessages((prev) => [...prev, assistantMessage]);
+      setEntities((prev) => [...prev, ...newEntities]);
+      setRelationships((prev) => [...prev, ...newRelationships]);
       setIsProcessing(false);
     }, 1500);
   };
 
   const handleEntityStatus = (id: string, status: 'approved' | 'rejected') => {
-    setEntities(prev => prev.map(entity => 
-      entity.id === id ? { ...entity, status } : entity
-    ));
+    setEntities((prev) =>
+      prev.map((entity) => (entity.id === id ? { ...entity, status } : entity))
+    );
   };
 
-  const handleRelationshipStatus = (id: string, status: 'approved' | 'rejected') => {
-    setRelationships(prev => prev.map(rel => 
-      rel.id === id ? { ...rel, status } : rel
-    ));
+  const handleRelationshipStatus = (
+    id: string,
+    status: 'approved' | 'rejected'
+  ) => {
+    setRelationships((prev) =>
+      prev.map((rel) => (rel.id === id ? { ...rel, status } : rel))
+    );
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved': return 'success';
-      case 'rejected': return 'error';
-      default: return 'default';
+      case 'approved':
+        return 'success';
+      case 'rejected':
+        return 'error';
+      default:
+        return 'default';
     }
   };
 
@@ -124,28 +156,45 @@ const OntologyMode = () => {
     <Grid container spacing={3} sx={{ height: '100%' }}>
       {/* Chat Panel */}
       <Grid item xs={12} md={6}>
-        <Paper elevation={0} sx={{ height: '100%', p: 2, display: 'flex', flexDirection: 'column' }}>
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Paper
+          elevation={0}
+          sx={{
+            height: '100%',
+            p: 2,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+          >
             <Schema /> Ontology Chat
           </Typography>
-          
+
           <Box sx={{ flexGrow: 1, overflowY: 'auto', mb: 2, minHeight: 400 }}>
             {messages.length === 0 ? (
               <Alert severity="info">
-                Describe your world's concepts, and I'll help extract entities and relationships for your knowledge graph.
+                Describe your world's concepts, and I'll help extract entities
+                and relationships for your knowledge graph.
               </Alert>
             ) : (
               <Stack spacing={2}>
-                {messages.map(message => (
+                {messages.map((message) => (
                   <Box
                     key={message.id}
                     sx={{
                       p: 2,
                       borderRadius: 2,
-                      bgcolor: message.role === 'user' ? 'primary.light' : 'grey.100',
-                      color: message.role === 'user' ? 'primary.contrastText' : 'text.primary',
+                      bgcolor:
+                        message.role === 'user' ? 'primary.light' : 'grey.100',
+                      color:
+                        message.role === 'user'
+                          ? 'primary.contrastText'
+                          : 'text.primary',
                       ml: message.role === 'user' ? 4 : 0,
-                      mr: message.role === 'assistant' ? 4 : 0
+                      mr: message.role === 'assistant' ? 4 : 0,
                     }}
                   >
                     <Typography variant="body1">{message.content}</Typography>
@@ -164,8 +213,12 @@ const OntologyMode = () => {
               variant="outlined"
               placeholder="Describe entities and their relationships..."
               value={inputMessage}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputMessage(e.target.value)}
-              onKeyPress={(e: React.KeyboardEvent) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setInputMessage(e.target.value)
+              }
+              onKeyPress={(e: React.KeyboardEvent) =>
+                e.key === 'Enter' && !e.shiftKey && handleSendMessage()
+              }
               disabled={isProcessing}
               multiline
               maxRows={3}
@@ -207,17 +260,29 @@ const OntologyMode = () => {
                       <ListItem>
                         <ListItemText
                           primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="body1">{entity.name}</Typography>
-                              <Chip label={entity.type} size="small" color="primary" />
-                              <Chip 
-                                label={`${Math.round(entity.confidence * 100)}%`} 
-                                size="small" 
-                                variant="outlined" 
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                              }}
+                            >
+                              <Typography variant="body1">
+                                {entity.name}
+                              </Typography>
+                              <Chip
+                                label={entity.type}
+                                size="small"
+                                color="primary"
                               />
-                              <Chip 
-                                label={entity.status} 
-                                size="small" 
+                              <Chip
+                                label={`${Math.round(entity.confidence * 100)}%`}
+                                size="small"
+                                variant="outlined"
+                              />
+                              <Chip
+                                label={entity.status}
+                                size="small"
                                 color={getStatusColor(entity.status) as any}
                               />
                             </Box>
@@ -226,18 +291,22 @@ const OntologyMode = () => {
                         <ListItemSecondaryAction>
                           {entity.status === 'pending' && (
                             <>
-                              <IconButton 
-                                edge="end" 
+                              <IconButton
+                                edge="end"
                                 aria-label="approve"
-                                onClick={() => handleEntityStatus(entity.id, 'approved')}
+                                onClick={() =>
+                                  handleEntityStatus(entity.id, 'approved')
+                                }
                                 color="success"
                               >
                                 <CheckCircle />
                               </IconButton>
-                              <IconButton 
-                                edge="end" 
+                              <IconButton
+                                edge="end"
                                 aria-label="reject"
-                                onClick={() => handleEntityStatus(entity.id, 'rejected')}
+                                onClick={() =>
+                                  handleEntityStatus(entity.id, 'rejected')
+                                }
                                 color="error"
                               >
                                 <Cancel />
@@ -274,18 +343,24 @@ const OntologyMode = () => {
                       <ListItem>
                         <ListItemText
                           primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                              }}
+                            >
                               <Typography variant="body1">
                                 {rel.source} → {rel.type} → {rel.target}
                               </Typography>
-                              <Chip 
-                                label={`${Math.round(rel.confidence * 100)}%`} 
-                                size="small" 
-                                variant="outlined" 
+                              <Chip
+                                label={`${Math.round(rel.confidence * 100)}%`}
+                                size="small"
+                                variant="outlined"
                               />
-                              <Chip 
-                                label={rel.status} 
-                                size="small" 
+                              <Chip
+                                label={rel.status}
+                                size="small"
                                 color={getStatusColor(rel.status) as any}
                               />
                             </Box>
@@ -294,18 +369,22 @@ const OntologyMode = () => {
                         <ListItemSecondaryAction>
                           {rel.status === 'pending' && (
                             <>
-                              <IconButton 
-                                edge="end" 
+                              <IconButton
+                                edge="end"
                                 aria-label="approve"
-                                onClick={() => handleRelationshipStatus(rel.id, 'approved')}
+                                onClick={() =>
+                                  handleRelationshipStatus(rel.id, 'approved')
+                                }
                                 color="success"
                               >
                                 <CheckCircle />
                               </IconButton>
-                              <IconButton 
-                                edge="end" 
+                              <IconButton
+                                edge="end"
                                 aria-label="reject"
-                                onClick={() => handleRelationshipStatus(rel.id, 'rejected')}
+                                onClick={() =>
+                                  handleRelationshipStatus(rel.id, 'rejected')
+                                }
                                 color="error"
                               >
                                 <Cancel />
@@ -325,7 +404,8 @@ const OntologyMode = () => {
           </Card>
 
           {/* Save Button */}
-          {(entities.some(e => e.status === 'approved') || relationships.some(r => r.status === 'approved')) && (
+          {(entities.some((e) => e.status === 'approved') ||
+            relationships.some((r) => r.status === 'approved')) && (
             <Box sx={{ mt: 3, textAlign: 'center' }}>
               <Button variant="contained" size="large" fullWidth>
                 Save Approved Artifacts to Graph

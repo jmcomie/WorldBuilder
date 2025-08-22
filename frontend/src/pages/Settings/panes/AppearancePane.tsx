@@ -8,10 +8,10 @@ const AppearancePane = () => {
   return (
     <div className="settings-pane">
       <h3 className="settings-pane-title">Appearance</h3>
-      
+
       <section className="settings-section">
         <h4 className="settings-section-title">Theme</h4>
-        
+
         <div className="settings-item">
           <div className="settings-theme-grid">
             <label className="settings-theme-option">
@@ -33,7 +33,7 @@ const AppearancePane = () => {
                 </div>
               </div>
             </label>
-            
+
             <label className="settings-theme-option">
               <input
                 type="radio"
@@ -57,10 +57,10 @@ const AppearancePane = () => {
           </div>
         </div>
       </section>
-      
+
       <section className="settings-section">
         <h4 className="settings-section-title">Colors</h4>
-        
+
         <div className="settings-item">
           <label className="settings-label">
             <span className="settings-label-text">Accent color</span>
@@ -78,7 +78,7 @@ const AppearancePane = () => {
             <span className="settings-color-value">{accentColor}</span>
           </div>
         </div>
-        
+
         <div className="settings-item">
           <label className="settings-label">
             <span className="settings-label-text">Graph node colors</span>
@@ -89,10 +89,10 @@ const AppearancePane = () => {
           <input type="checkbox" className="settings-checkbox" defaultChecked />
         </div>
       </section>
-      
+
       <section className="settings-section">
         <h4 className="settings-section-title">Display</h4>
-        
+
         <div className="settings-item">
           <label className="settings-label">
             <span className="settings-label-text">Animations</span>
@@ -102,7 +102,7 @@ const AppearancePane = () => {
           </label>
           <input type="checkbox" className="settings-checkbox" defaultChecked />
         </div>
-        
+
         <div className="settings-item">
           <label className="settings-label">
             <span className="settings-label-text">Compact mode</span>

@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  TextField, 
-  Button, 
-  Alert, 
+import { Close } from '@mui/icons-material';
+import {
+  Box,
+  TextField,
+  Button,
+  Alert,
   AlertTitle,
   Typography,
   Paper,
   Stack,
   IconButton,
-  Collapse
+  Collapse,
 } from '@mui/material';
-import { Close } from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
 import { createEpisode } from '../../../../shared/api/client';
 import type { EpisodeRequest } from '../../../../types/graphiti';
 
@@ -63,22 +63,22 @@ const EpisodeMode = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    
+
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    
+
     try {
       const episodeData: EpisodeRequest = {
         name: name.trim(),
         content: content.trim(),
         source_description: sourceDescription.trim() || undefined,
       };
-      
+
       await createEpisode(episodeData);
       setSuccess(true);
       resetForm();
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
@@ -93,10 +93,10 @@ const EpisodeMode = () => {
       <Typography variant="h5" gutterBottom>
         Create New Episode
       </Typography>
-      
+
       <Collapse in={!!error}>
-        <Alert 
-          severity="error" 
+        <Alert
+          severity="error"
           sx={{ mb: 2 }}
           action={
             <IconButton
@@ -112,14 +112,14 @@ const EpisodeMode = () => {
           {error}
         </Alert>
       </Collapse>
-      
+
       <Collapse in={success}>
         <Alert severity="success" sx={{ mb: 2 }}>
           <AlertTitle>Success</AlertTitle>
           Episode created successfully!
         </Alert>
       </Collapse>
-      
+
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={3}>
           <TextField
@@ -127,7 +127,9 @@ const EpisodeMode = () => {
             required
             fullWidth
             value={name}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setName(e.target.value)
+            }
             disabled={isSubmitting}
             placeholder="Enter episode name"
           />
@@ -139,7 +141,9 @@ const EpisodeMode = () => {
             multiline
             rows={8}
             value={content}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setContent(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setContent(e.target.value)
+            }
             disabled={isSubmitting}
             placeholder="Enter episode content (minimum 10 characters)"
             helperText={`${content.length} characters`}
@@ -149,23 +153,25 @@ const EpisodeMode = () => {
             label="Source Description"
             fullWidth
             value={sourceDescription}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSourceDescription(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setSourceDescription(e.target.value)
+            }
             disabled={isSubmitting}
             placeholder="Where did this information come from?"
           />
 
           <Stack direction="row" spacing={2}>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               variant="contained"
               disabled={isSubmitting}
               size="large"
             >
               {isSubmitting ? 'Creating...' : 'Create Episode'}
             </Button>
-            
-            <Button 
-              type="button" 
+
+            <Button
+              type="button"
               variant="outlined"
               onClick={resetForm}
               disabled={isSubmitting}

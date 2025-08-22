@@ -9,13 +9,25 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ fullWidth = false, error = false, helperText, className = '', children, ...props }, ref) => {
+  (
+    {
+      fullWidth = false,
+      error = false,
+      helperText,
+      className = '',
+      children,
+      ...props
+    },
+    ref
+  ) => {
     const selectClasses = [
       'select',
       fullWidth && 'select--full-width',
       error && 'select--error',
-      className
-    ].filter(Boolean).join(' ');
+      className,
+    ]
+      .filter(Boolean)
+      .join(' ');
 
     return (
       <div className="select-wrapper">
@@ -30,8 +42,8 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
         </select>
         <span className="select-arrow">▼</span>
         {helperText && (
-          <span 
-            id="select-helper-text" 
+          <span
+            id="select-helper-text"
             className={`select-helper ${error ? 'select-helper--error' : ''}`}
           >
             {helperText}

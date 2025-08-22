@@ -1,6 +1,11 @@
-import React from 'react';
-import { ToggleButton, ToggleButtonGroup, Box, Typography } from '@mui/material';
 import { Create, Schema, Psychology } from '@mui/icons-material';
+import {
+  ToggleButton,
+  ToggleButtonGroup,
+  Box,
+  Typography,
+} from '@mui/material';
+import React from 'react';
 
 export type WriteMode = 'episode' | 'ontology' | 'ideation';
 
@@ -10,7 +15,10 @@ interface ModeSelectorProps {
 }
 
 const ModeSelector = ({ mode, onModeChange }: ModeSelectorProps) => {
-  const handleModeChange = (_: React.MouseEvent<HTMLElement>, newMode: WriteMode | null) => {
+  const handleModeChange = (
+    _: React.MouseEvent<HTMLElement>,
+    newMode: WriteMode | null
+  ) => {
     if (newMode !== null) {
       onModeChange(newMode);
     }
@@ -28,15 +36,27 @@ const ModeSelector = ({ mode, onModeChange }: ModeSelectorProps) => {
         aria-label="write mode"
         sx={{ width: '100%' }}
       >
-        <ToggleButton value="episode" aria-label="episode mode" sx={{ flex: 1 }}>
+        <ToggleButton
+          value="episode"
+          aria-label="episode mode"
+          sx={{ flex: 1 }}
+        >
           <Create sx={{ mr: 1 }} />
           Episode
         </ToggleButton>
-        <ToggleButton value="ontology" aria-label="ontology mode" sx={{ flex: 1 }}>
+        <ToggleButton
+          value="ontology"
+          aria-label="ontology mode"
+          sx={{ flex: 1 }}
+        >
           <Schema sx={{ mr: 1 }} />
           Ontology
         </ToggleButton>
-        <ToggleButton value="ideation" aria-label="ideation mode" sx={{ flex: 1 }}>
+        <ToggleButton
+          value="ideation"
+          aria-label="ideation mode"
+          sx={{ flex: 1 }}
+        >
           <Psychology sx={{ mr: 1 }} />
           Ideation
         </ToggleButton>

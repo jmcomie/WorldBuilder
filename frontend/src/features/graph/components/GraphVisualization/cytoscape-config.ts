@@ -1,197 +1,197 @@
 import type { Stylesheet } from 'cytoscape';
 
 export const cytoscapeStylesheet: Stylesheet[] = [
-    {
-        selector: 'node',
-        style: {
-            'background-color': '#666',
-            'label': 'data(label)',
-            'width': 40,
-            'height': 40,
-            'text-valign': 'center',
-            'text-halign': 'center',
-            'font-size': 12,
-            'color': '#fff',
-            'text-outline-width': 2,
-            'text-outline-color': '#666',
-            'overlay-padding': 6
-        }
+  {
+    selector: 'node',
+    style: {
+      'background-color': '#666',
+      label: 'data(label)',
+      width: 40,
+      height: 40,
+      'text-valign': 'center',
+      'text-halign': 'center',
+      'font-size': 12,
+      color: '#fff',
+      'text-outline-width': 2,
+      'text-outline-color': '#666',
+      'overlay-padding': 6,
     },
-    {
-        selector: 'edge',
-        style: {
-            'width': 2,
-            'line-color': '#ccc',
-            'target-arrow-color': '#ccc',
-            'target-arrow-shape': 'triangle',
-            'curve-style': 'bezier',
-            'label': 'data(label)',
-            'font-size': 10,
-            'text-rotation': 'autorotate',
-            'text-margin-x': 0,
-            'text-margin-y': -10
-        }
+  },
+  {
+    selector: 'edge',
+    style: {
+      width: 2,
+      'line-color': '#ccc',
+      'target-arrow-color': '#ccc',
+      'target-arrow-shape': 'triangle',
+      'curve-style': 'bezier',
+      label: 'data(label)',
+      'font-size': 10,
+      'text-rotation': 'autorotate',
+      'text-margin-x': 0,
+      'text-margin-y': -10,
     },
-    {
-        selector: 'node:selected',
-        style: {
-            'background-color': '#0074D9',
-            'border-width': 3,
-            'border-color': '#001f3f'
-        }
+  },
+  {
+    selector: 'node:selected',
+    style: {
+      'background-color': '#0074D9',
+      'border-width': 3,
+      'border-color': '#001f3f',
     },
-    {
-        selector: 'edge:selected',
-        style: {
-            'line-color': '#0074D9',
-            'target-arrow-color': '#0074D9',
-            'width': 3
-        }
+  },
+  {
+    selector: 'edge:selected',
+    style: {
+      'line-color': '#0074D9',
+      'target-arrow-color': '#0074D9',
+      width: 3,
     },
-    {
-        selector: 'node[type="Person"]',
-        style: {
-            'background-color': '#4A90E2',
-            'shape': 'ellipse'
-        }
+  },
+  {
+    selector: 'node[type="Person"]',
+    style: {
+      'background-color': '#4A90E2',
+      shape: 'ellipse',
     },
-    {
-        selector: 'node[type="Organization"]',
-        style: {
-            'background-color': '#F5A623',
-            'shape': 'rectangle'
-        }
+  },
+  {
+    selector: 'node[type="Organization"]',
+    style: {
+      'background-color': '#F5A623',
+      shape: 'rectangle',
     },
-    {
-        selector: 'node[type="Location"]',
-        style: {
-            'background-color': '#7ED321',
-            'shape': 'diamond'
-        }
+  },
+  {
+    selector: 'node[type="Location"]',
+    style: {
+      'background-color': '#7ED321',
+      shape: 'diamond',
     },
-    {
-        selector: 'node[type="Event"]',
-        style: {
-            'background-color': '#BD10E0',
-            'shape': 'star'
-        }
+  },
+  {
+    selector: 'node[type="Event"]',
+    style: {
+      'background-color': '#BD10E0',
+      shape: 'star',
     },
-    {
-        selector: 'node[type="Concept"]',
-        style: {
-            'background-color': '#50E3C2',
-            'shape': 'hexagon'
-        }
+  },
+  {
+    selector: 'node[type="Concept"]',
+    style: {
+      'background-color': '#50E3C2',
+      shape: 'hexagon',
     },
-    {
-        selector: '.highlighted',
-        style: {
-            'background-color': '#FF4136',
-            'line-color': '#FF4136',
-            'target-arrow-color': '#FF4136',
-            'transition-property': 'background-color, line-color, target-arrow-color',
-            'transition-duration': '0.3s'
-        }
+  },
+  {
+    selector: '.highlighted',
+    style: {
+      'background-color': '#FF4136',
+      'line-color': '#FF4136',
+      'target-arrow-color': '#FF4136',
+      'transition-property': 'background-color, line-color, target-arrow-color',
+      'transition-duration': '0.3s',
     },
-    {
-        selector: '.faded',
-        style: {
-            'opacity': 0.25,
-            'text-opacity': 0
-        }
-    }
+  },
+  {
+    selector: '.faded',
+    style: {
+      opacity: 0.25,
+      'text-opacity': 0,
+    },
+  },
 ];
 
 export const cytoscapeLayoutOptions = {
-    'force-directed': {
-        name: 'fcose',
-        quality: 'default',
-        randomize: true,
-        animate: true,
-        animationDuration: 1000,
-        animationEasing: 'ease-out',
-        fit: true,
-        padding: 50,
-        nodeDimensionsIncludeLabels: true,
-        uniformNodeDimensions: false,
-        packComponents: true,
-        nodeRepulsion: 4500,
-        idealEdgeLength: 50,
-        edgeElasticity: 0.45,
-        nestingFactor: 0.1,
-        gravity: 0.25,
-        gravityRangeCompound: 1.5,
-        gravityCompound: 1.0,
-        gravityRange: 3.8,
-        initialEnergyOnIncremental: 0.5
-    },
-    'circle': {
-        name: 'circle',
-        fit: true,
-        padding: 50,
-        animate: true,
-        animationDuration: 500,
-        animationEasing: 'ease-out',
-        avoidOverlap: true,
-        radius: undefined,
-        startAngle: 3 / 2 * Math.PI,
-        sweep: undefined,
-        clockwise: true,
-        sort: undefined
-    },
-    'grid': {
-        name: 'grid',
-        fit: true,
-        padding: 50,
-        boundingBox: undefined,
-        avoidOverlap: true,
-        avoidOverlapPadding: 10,
-        nodeDimensionsIncludeLabels: false,
-        spacingFactor: undefined,
-        condense: false,
-        rows: undefined,
-        cols: undefined,
-        sort: undefined,
-        animate: true,
-        animationDuration: 500,
-        animationEasing: 'ease-out'
-    },
-    'concentric': {
-        name: 'concentric',
-        fit: true,
-        padding: 50,
-        startAngle: 3 / 2 * Math.PI,
-        sweep: undefined,
-        clockwise: true,
-        equidistant: false,
-        minNodeSpacing: 10,
-        boundingBox: undefined,
-        avoidOverlap: true,
-        nodeDimensionsIncludeLabels: false,
-        height: undefined,
-        width: undefined,
-        spacingFactor: undefined,
-        concentric: (node: any) => node.degree(),
-        levelWidth: (nodes: any) => nodes.maxDegree() / 4,
-        animate: true,
-        animationDuration: 500,
-        animationEasing: 'ease-out'
-    },
-    'breadthfirst': {
-        name: 'breadthfirst',
-        fit: true,
-        directed: false,
-        padding: 50,
-        circle: false,
-        grid: false,
-        spacingFactor: 1.75,
-        boundingBox: undefined,
-        avoidOverlap: true,
-        nodeDimensionsIncludeLabels: false,
-        roots: undefined,
-        maximal: false,
-        animate: true,
-        animationDuration: 500,
-        animationEasing: 'ease-out'
-    }
+  'force-directed': {
+    name: 'fcose',
+    quality: 'default',
+    randomize: true,
+    animate: true,
+    animationDuration: 1000,
+    animationEasing: 'ease-out',
+    fit: true,
+    padding: 50,
+    nodeDimensionsIncludeLabels: true,
+    uniformNodeDimensions: false,
+    packComponents: true,
+    nodeRepulsion: 4500,
+    idealEdgeLength: 50,
+    edgeElasticity: 0.45,
+    nestingFactor: 0.1,
+    gravity: 0.25,
+    gravityRangeCompound: 1.5,
+    gravityCompound: 1.0,
+    gravityRange: 3.8,
+    initialEnergyOnIncremental: 0.5,
+  },
+  circle: {
+    name: 'circle',
+    fit: true,
+    padding: 50,
+    animate: true,
+    animationDuration: 500,
+    animationEasing: 'ease-out',
+    avoidOverlap: true,
+    radius: undefined,
+    startAngle: (3 / 2) * Math.PI,
+    sweep: undefined,
+    clockwise: true,
+    sort: undefined,
+  },
+  grid: {
+    name: 'grid',
+    fit: true,
+    padding: 50,
+    boundingBox: undefined,
+    avoidOverlap: true,
+    avoidOverlapPadding: 10,
+    nodeDimensionsIncludeLabels: false,
+    spacingFactor: undefined,
+    condense: false,
+    rows: undefined,
+    cols: undefined,
+    sort: undefined,
+    animate: true,
+    animationDuration: 500,
+    animationEasing: 'ease-out',
+  },
+  concentric: {
+    name: 'concentric',
+    fit: true,
+    padding: 50,
+    startAngle: (3 / 2) * Math.PI,
+    sweep: undefined,
+    clockwise: true,
+    equidistant: false,
+    minNodeSpacing: 10,
+    boundingBox: undefined,
+    avoidOverlap: true,
+    nodeDimensionsIncludeLabels: false,
+    height: undefined,
+    width: undefined,
+    spacingFactor: undefined,
+    concentric: (node: any) => node.degree(),
+    levelWidth: (nodes: any) => nodes.maxDegree() / 4,
+    animate: true,
+    animationDuration: 500,
+    animationEasing: 'ease-out',
+  },
+  breadthfirst: {
+    name: 'breadthfirst',
+    fit: true,
+    directed: false,
+    padding: 50,
+    circle: false,
+    grid: false,
+    spacingFactor: 1.75,
+    boundingBox: undefined,
+    avoidOverlap: true,
+    nodeDimensionsIncludeLabels: false,
+    roots: undefined,
+    maximal: false,
+    animate: true,
+    animationDuration: 500,
+    animationEasing: 'ease-out',
+  },
 };

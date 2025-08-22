@@ -10,21 +10,26 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ 
-    variant = 'default',
-    fullWidth = false,
-    error = false,
-    helperText,
-    className = '',
-    ...props 
-  }, ref) => {
+  (
+    {
+      variant = 'default',
+      fullWidth = false,
+      error = false,
+      helperText,
+      className = '',
+      ...props
+    },
+    ref
+  ) => {
     const inputClasses = [
       'input',
       `input--${variant}`,
       fullWidth && 'input--full-width',
       error && 'input--error',
-      className
-    ].filter(Boolean).join(' ');
+      className,
+    ]
+      .filter(Boolean)
+      .join(' ');
 
     return (
       <div className="input-wrapper">
@@ -36,8 +41,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />
         {helperText && (
-          <span 
-            id="input-helper-text" 
+          <span
+            id="input-helper-text"
             className={`input-helper ${error ? 'input-helper--error' : ''}`}
           >
             {helperText}
