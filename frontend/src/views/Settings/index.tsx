@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import GeneralPane from './panes/GeneralPane';
 import ApiKeysPane from './panes/ApiKeysPane';
 import AppearancePane from './panes/AppearancePane';
@@ -8,7 +8,7 @@ import './Settings.css';
 
 type SettingsTab = 'general' | 'api-keys' | 'appearance' | 'advanced' | 'mcp-servers';
 
-const Settings: React.FC = () => {
+const Settings = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
   const tabs = [

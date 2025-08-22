@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import './PaneStyles.css';
 
-const AppearancePane: React.FC = () => {
+const AppearancePane = () => {
   const [theme, setTheme] = useState('dark');
   const [accentColor, setAccentColor] = useState('#2563eb');
 

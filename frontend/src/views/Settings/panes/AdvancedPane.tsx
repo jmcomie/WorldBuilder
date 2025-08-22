@@ -1,7 +1,6 @@
-import React from 'react';
 import './PaneStyles.css';
 
-const AdvancedPane: React.FC = () => {
+const AdvancedPane = () => {
   return (
     <div className="settings-pane">
       <h3 className="settings-pane-title">Advanced Settings</h3>

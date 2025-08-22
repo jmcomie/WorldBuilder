@@ -9,7 +9,7 @@ interface ModeSelectorProps {
   onModeChange: (mode: WriteMode) => void;
 }
 
-const ModeSelector: React.FC<ModeSelectorProps> = ({ mode, onModeChange }) => {
+const ModeSelector = ({ mode, onModeChange }: ModeSelectorProps) => {
   const handleModeChange = (_: React.MouseEvent<HTMLElement>, newMode: WriteMode | null) => {
     if (newMode !== null) {
       onModeChange(newMode);

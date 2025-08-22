@@ -21,7 +21,7 @@ interface Message {
   timestamp: Date;
 }
 
-const IdeationMode: React.FC = () => {
+const IdeationMode = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);

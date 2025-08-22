@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import NavigationItem, { type NavigationItemRef } from './NavigationItem';
 import editVideo from '../../assets/videos/edit.mp4';
@@ -59,7 +59,7 @@ const navigationItems = [
 
 type AnimationPattern = 'simultaneous' | 'left-to-right' | 'right-to-left';
 
-const Navigation: React.FC<NavigationProps> = ({ isCompact, onNavigate, variant = 'full' }) => {
+const Navigation = ({ isCompact, onNavigate, variant = 'full' }: NavigationProps) => {
   const itemRefs = useRef<(NavigationItemRef | null)[]>([]);
   const location = useLocation();
   

@@ -1,7 +1,6 @@
-import React from 'react';
 import './Play.css';
 
-const Play: React.FC = () => {
+const Play = () => {
   return (
     <div className="view-container play-view">
       <h2>Play</h2>

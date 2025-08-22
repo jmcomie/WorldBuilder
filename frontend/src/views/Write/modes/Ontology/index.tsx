@@ -50,7 +50,7 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-const OntologyMode: React.FC = () => {
+const OntologyMode = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [entities, setEntities] = useState<Entity[]>([]);

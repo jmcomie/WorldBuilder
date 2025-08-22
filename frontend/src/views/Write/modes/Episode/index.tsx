@@ -15,7 +15,7 @@ import { Close } from '@mui/icons-material';
 import { createEpisode } from '../../../../api';
 import type { EpisodeRequest } from '../../../../types/graphiti';
 
-const EpisodeMode: React.FC = () => {
+const EpisodeMode = () => {
   const [name, setName] = useState('');
   const [content, setContent] = useState('');
   const [sourceDescription, setSourceDescription] = useState('');

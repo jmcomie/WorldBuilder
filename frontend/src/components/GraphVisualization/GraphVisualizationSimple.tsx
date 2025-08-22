@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import cytoscape from 'cytoscape';
 import fcose from 'cytoscape-fcose';
 import { api } from '../../api';
@@ -14,7 +14,7 @@ interface NodeDetails {
     properties: any;
 }
 
-export const GraphVisualizationSimple: React.FC = () => {
+export const GraphVisualizationSimple = () => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);

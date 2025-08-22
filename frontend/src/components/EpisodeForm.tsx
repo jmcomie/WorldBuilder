@@ -3,7 +3,7 @@ import { createEpisode } from '../api';
 import type { EpisodeRequest } from '../types/graphiti';
 import './EpisodeForm.css';
 
-const EpisodeForm: React.FC = () => {
+const EpisodeForm = () => {
   const [name, setName] = useState('');
   const [content, setContent] = useState('');
   const [sourceDescription, setSourceDescription] = useState('');

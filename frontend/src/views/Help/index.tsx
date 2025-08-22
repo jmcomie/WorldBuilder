@@ -1,7 +1,6 @@
-import React from 'react';
 import './Help.css';
 
-const Help: React.FC = () => {
+const Help = () => {
   return (
     <div className="help-content">
       <p>Get assistance and learn how to use worldbuilder.</p>

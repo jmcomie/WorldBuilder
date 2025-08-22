@@ -1,8 +1,7 @@
-import React from 'react';
 import type { GraphStatsProps } from './types';
 import './GraphStats.css';
 
-export const GraphStats: React.FC<GraphStatsProps> = ({ stats, loading }) => {
+export const GraphStats = ({ stats, loading }: GraphStatsProps) => {
     if (loading) {
         return (
             <div className="graph-stats loading">

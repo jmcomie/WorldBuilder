@@ -1,9 +1,8 @@
-import React from 'react';
 // import { GraphVisualization } from '../../components/GraphVisualization/GraphVisualization';
 import { GraphVisualizationSimple } from '../../components/GraphVisualization/GraphVisualizationSimple';
 import './Graph.css';
 
-const Graph: React.FC = () => {
+const Graph = () => {
   return (
     <div className="view-container graph-view">
       <GraphVisualizationSimple />

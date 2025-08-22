@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import './PaneStyles.css';
 
 interface McpServer {
@@ -10,7 +10,7 @@ interface McpServer {
   enabled: boolean;
 }
 
-const McpServersPane: React.FC = () => {
+const McpServersPane = () => {
   const [servers, setServers] = useState<McpServer[]>([
     {
       id: '1',

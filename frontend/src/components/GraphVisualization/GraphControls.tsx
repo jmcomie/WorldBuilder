@@ -1,4 +1,3 @@
-import React from 'react';
 import type { GraphControlsProps, LayoutType } from './types';
 import './GraphControls.css';
 
@@ -10,7 +9,7 @@ const LAYOUT_OPTIONS: { value: LayoutType; label: string }[] = [
     { value: 'breadthfirst', label: 'Breadth First' }
 ];
 
-export const GraphControls: React.FC<GraphControlsProps> = ({
+export const GraphControls = ({
     cy,
     layout,
     onLayoutChange,
@@ -19,7 +18,7 @@ export const GraphControls: React.FC<GraphControlsProps> = ({
     onFit,
     onReset,
     onExport
-}) => {
+}: GraphControlsProps) => {
     return (
         <div className="graph-controls">
             <div className="control-group">

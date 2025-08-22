@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Box, Container } from '@mui/material';
 import ModeSelector from './components/ModeSelector';
 import type { WriteMode } from './components/ModeSelector';
@@ -7,7 +7,7 @@ import OntologyMode from './modes/Ontology';
 import IdeationMode from './modes/Ideation';
 import './Write.css';
 
-const Write: React.FC = () => {
+const Write = () => {
   const [mode, setMode] = useState<WriteMode>('episode');
 
   const renderMode = () => {

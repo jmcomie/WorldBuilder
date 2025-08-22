@@ -9,7 +9,7 @@ interface OverlayProps {
   className?: string;
 }
 
-const Overlay: React.FC<OverlayProps> = ({ isOpen, onClose, title, children, className }) => {
+const Overlay = ({ isOpen, onClose, title, children, className }: OverlayProps) => {
   if (!isOpen) return null;
 
   return (

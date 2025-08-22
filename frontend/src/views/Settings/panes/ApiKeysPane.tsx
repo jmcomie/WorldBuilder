@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import './PaneStyles.css';
 
-const ApiKeysPane: React.FC = () => {
+const ApiKeysPane = () => {
   const [showOpenAIKey, setShowOpenAIKey] = useState(false);
   const [openAIKey, setOpenAIKey] = useState('');
 

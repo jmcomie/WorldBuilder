@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useCytoscape } from '../../hooks/useCytoscape';
 import { GraphControls } from './GraphControls';
 import { GraphStats } from './GraphStats';
@@ -6,7 +6,7 @@ import { api } from '../../api';
 import type { LayoutType, GraphStats as GraphStatsType } from './types';
 import './GraphVisualization.css';
 
-export const GraphVisualization: React.FC = () => {
+export const GraphVisualization = () => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [elements, setElements] = useState({ nodes: [], edges: [] });
     const [layout, setLayout] = useState<LayoutType>('force-directed');

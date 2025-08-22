@@ -1,7 +1,6 @@
-import React from 'react';
 import './PaneStyles.css';
 
-const GeneralPane: React.FC = () => {
+const GeneralPane = () => {
   return (
     <div className="settings-pane">
       <h3 className="settings-pane-title">General Settings</h3>
