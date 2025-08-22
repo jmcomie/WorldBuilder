@@ -1,9 +1,9 @@
 import { createHashRouter, Navigate } from 'react-router-dom';
 import App from './App';
-import HomeView from './views/Home';
-import WriteView from './views/Write';
-import GraphView from './views/Graph';
-import PlayView from './views/Play';
+import HomeView from './pages/Home';
+import WriteView from './pages/Write';
+import GraphView from './pages/Graph';
+import PlayView from './pages/Play';
 
 export const router = createHashRouter([
   {

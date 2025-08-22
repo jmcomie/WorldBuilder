@@ -1,10 +1,10 @@
 import { useState, useEffect, createContext, useContext } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { api } from './api'
-import Navigation from './components/Navigation/Navigation'
-import Overlay from './components/Overlay/Overlay'
-import Settings from './views/Settings'
-import Help from './views/Help'
+import { api } from './shared/api/client'
+import Navigation from './components/organisms/Navigation/Navigation'
+import Overlay from './components/organisms/Overlay/Overlay'
+import Settings from './pages/Settings'
+import Help from './pages/Help'
 import './App.css'
 
 interface AppContextType {

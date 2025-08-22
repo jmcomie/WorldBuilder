@@ -1,0 +1,32 @@
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.label-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.label-text {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.label-required {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.label-description {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  line-height: 1.4;
+}
