@@ -1,11 +1,11 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createHashRouter, Navigate } from 'react-router-dom';
 import App from './App';
 import HomeView from './views/Home';
 import WriteView from './views/Write';
 import GraphView from './views/Graph';
 import PlayView from './views/Play';
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     path: '/',
     element: <App />,
