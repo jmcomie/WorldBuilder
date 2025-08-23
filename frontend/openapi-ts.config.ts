@@ -1,7 +1,7 @@
 import { defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
-  input: './openapi.json', // Will be provided later
+  input: './src/shared/api/openapi.json',
   output: {
     path: 'src/shared/api/sdk',
     format: 'prettier', // Uses your existing .prettierrc

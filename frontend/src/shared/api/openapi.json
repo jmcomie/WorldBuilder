@@ -1,0 +1,49 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Worldbuilder API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Root",
+        "description": "Basic health check.",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/test-neo4j": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Test Neo4J",
+        "description": "Test Neo4j connection.",
+        "operationId": "test_neo4j_test_neo4j_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
