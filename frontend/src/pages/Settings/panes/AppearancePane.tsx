@@ -2,61 +2,11 @@ import { useState } from 'react';
 import './PaneStyles.css';
 
 const AppearancePane = () => {
-  const [theme, setTheme] = useState('dark');
   const [accentColor, setAccentColor] = useState('#2563eb');
 
   return (
     <div className="settings-pane">
       <h3 className="settings-pane-title">Appearance</h3>
-
-      <section className="settings-section">
-        <h4 className="settings-section-title">Theme</h4>
-
-        <div className="settings-item">
-          <div className="settings-theme-grid">
-            <label className="settings-theme-option">
-              <input
-                type="radio"
-                name="theme"
-                value="dark"
-                checked={theme === 'dark'}
-                onChange={(e) => setTheme(e.target.value)}
-              />
-              <div className="settings-theme-preview settings-theme-dark">
-                <span className="settings-theme-name">Dark</span>
-                <div className="settings-theme-sample">
-                  <div className="settings-theme-bar"></div>
-                  <div className="settings-theme-content">
-                    <div className="settings-theme-line"></div>
-                    <div className="settings-theme-line"></div>
-                  </div>
-                </div>
-              </div>
-            </label>
-
-            <label className="settings-theme-option">
-              <input
-                type="radio"
-                name="theme"
-                value="light"
-                checked={theme === 'light'}
-                onChange={(e) => setTheme(e.target.value)}
-                disabled
-              />
-              <div className="settings-theme-preview settings-theme-light">
-                <span className="settings-theme-name">Light (Coming Soon)</span>
-                <div className="settings-theme-sample">
-                  <div className="settings-theme-bar"></div>
-                  <div className="settings-theme-content">
-                    <div className="settings-theme-line"></div>
-                    <div className="settings-theme-line"></div>
-                  </div>
-                </div>
-              </div>
-            </label>
-          </div>
-        </div>
-      </section>
 
       <section className="settings-section">
         <h4 className="settings-section-title">Colors</h4>

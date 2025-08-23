@@ -6,10 +6,10 @@
 }
 
 .input {
-  background-color: #1f2937;
-  border: 1px solid #374151;
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
   border-radius: 6px;
-  color: #e5e7eb;
+  color: #1f2937;
   font-size: 0.9375rem;
   padding: 0.5rem 0.75rem;
   transition: all 0.2s ease;
@@ -18,7 +18,7 @@
 }
 
 .input:hover:not(:disabled) {
-  border-color: #4b5563;
+  border-color: #9ca3af;
 }
 
 .input:focus {
@@ -29,7 +29,7 @@
 .input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background-color: #111827;
+  background-color: #f9fafb;
 }
 
 .input--monospace {
@@ -51,7 +51,7 @@
 }
 
 .input::placeholder {
-  color: #6b7280;
+  color: #9ca3af;
 }
 
 .input[type='number'] {
@@ -66,7 +66,7 @@
 
 .input-helper {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: #6b7280;
   margin-top: 0.25rem;
 }
 

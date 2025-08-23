@@ -43,7 +43,7 @@
   justify-content: center;
   border-radius: 12px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
 }
 
@@ -121,7 +121,7 @@
 
 /* Active/Selected State */
 .navigation-item.active .navigation-media {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
   box-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
 }
 

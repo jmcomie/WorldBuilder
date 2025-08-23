@@ -55,7 +55,7 @@
   right: 0.75rem;
   transform: translateY(-50%);
   pointer-events: none;
-  color: #9ca3af;
+  color: #6b7280;
   font-size: 0.625rem;
 }
 
@@ -64,14 +64,14 @@
 }
 
 .select option {
-  background-color: #1f2937;
-  color: #e5e7eb;
+  background-color: #ffffff;
+  color: #1f2937;
   padding: 0.5rem;
 }
 
 .select-helper {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: #6b7280;
   margin-top: 0.25rem;
 }
 
