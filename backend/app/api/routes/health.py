@@ -7,15 +7,8 @@ from app.services.neo4j_service import Neo4jService
 router = APIRouter()
 
 
-@router.get("/")
+@router.get("/health")
 async def root():
     """Basic health check."""
     return {"message": "Backend is running"}
 
-
-@router.get("/test-neo4j")
-async def test_neo4j(driver: Driver = Depends(get_driver)):
-    """Test Neo4j connection."""
-    service = Neo4jService(driver)
-    message = service.test_connection()
-    return {"message": message}

@@ -4,7 +4,7 @@ import Navigation from './components/organisms/Navigation/Navigation';
 import Overlay from './components/organisms/Overlay/Overlay';
 import Help from './pages/Help';
 import Settings from './pages/Settings';
-import { api } from './shared/api/client';
+import { setupApiClient, rootHealthGet } from './shared/api';
 import './App.css';
 
 interface AppContextType {
@@ -22,7 +22,6 @@ export const useApp = () => {
 
 function App() {
   const [backendStatus, setBackendStatus] = useState<string>('loading...');
-  const [neo4jStatus, setNeo4jStatus] = useState<string>('loading...');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
@@ -31,17 +30,19 @@ function App() {
   const isNavigationCompact = location.pathname !== '/';
 
   useEffect(() => {
-    // Check backend status
-    fetch('http://localhost:8000/')
-      .then((res) => res.json())
-      .then((data) => setBackendStatus(data.message))
-      .catch(() => setBackendStatus('error'));
+    // Initialize API client
+    setupApiClient();
 
-    // Check Neo4j connection
-    api
-      .testConnection()
-      .then((data) => setNeo4jStatus(data.message))
-      .catch(() => setNeo4jStatus('error'));
+    // Check backend health
+    rootHealthGet()
+      .then((response) => {
+        if (response.data) {
+          setBackendStatus('connected');
+        } else if (response.error) {
+          setBackendStatus('error');
+        }
+      })
+      .catch(() => setBackendStatus('error'));
   }, []);
 
   const handleNavigate = (
@@ -59,7 +60,6 @@ function App() {
   const StatusDisplay = () => (
     <div className="status-container">
       <p>Backend Status: {backendStatus}</p>
-      <p>Database Status: {neo4jStatus}</p>
     </div>
   );
 
@@ -97,7 +97,7 @@ function App() {
         </header>
 
         <main className="app-main">
-          <Outlet context={{ backendStatus, neo4jStatus }} />
+          <Outlet context={{ backendStatus }} />
         </main>
 
         {location.pathname === '/' && (

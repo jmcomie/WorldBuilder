@@ -13,7 +13,6 @@ Worldbuilder Frontend - A React-based web application for worldbuilding with kno
 - **UI Libraries**: 
   - Material-UI (@mui/material) - Primary UI component library
   - @assistant-ui/react - AI assistant integration (prepared for future chat features)
-- **Graph Visualization**: Cytoscape.js with fcose layout algorithm
 - **Routing**: React Router v7 (hash router)
 - **State Management**: React hooks and Context API
 
@@ -66,30 +65,26 @@ Routes defined in `src/router.tsx` using `createHashRouter`:
 
 ### Backend API Integration
 
-API client in `src/api.ts` connects to backend at `http://localhost:8000`:
+API client uses auto-generated SDK from OpenAPI spec.
 
-**Status Endpoints**:
-- `GET /` - Backend health check
-- `GET /test-neo4j` - Database connection test
+**Configuration**:
+- SDK setup in `src/shared/api/setup.ts`
+- Backend URL from `src/config.ts`
+- Initialized in App.tsx on mount
 
-**Graph Endpoints**:
-- `GET /graph` - Cytoscape-compatible graph data
-- `GET /graph/with-facts` - Graph with Graphiti fact details
-- `GET /graph/stats` - Node/edge statistics
-- `GET /graph/nodes` - Filtered node list
-- `GET /graph/edges` - Filtered edge list
-- `GET /graph/node-distances/{uuid}` - Distance calculations from center node
+**Available Endpoints**:
+- `GET /health` - Backend health check
 
-**Content Endpoints**:
-- `POST /episodes` - Create knowledge graph episodes
+**Temporarily Disabled Features**:
+- Episode creation - UI preserved but submission disabled
+- Graph visualization - Placeholder displayed
 
 ### Status Monitoring
 
-The app performs status checks on mount (App.tsx:34-44):
-1. Backend health check via root endpoint
-2. Neo4j connection test via `api.testConnection()`
-3. Status displayed in footer on home page
-4. States tracked: `backendStatus` and `neo4jStatus`
+The app performs status check on mount:
+1. Backend health check via `/health` endpoint
+2. Status displayed in App component
+3. State tracked: `backendStatus`
 
 ### Key Component Patterns
 
@@ -100,13 +95,7 @@ The app performs status checks on mount (App.tsx:34-44):
 **Draft Saving** (Episode mode):
 - Auto-saves to localStorage on content change
 - Restores draft on component mount
-- Clears on successful submission
-
-**Graph Visualization** (GraphVisualizationSimple.tsx):
-- Multiple layout algorithms: circle, force-directed (fcose), distance-based
-- Edge weight calculation based on relationship importance
-- Interactive node selection with detail display
-- Zoom/pan controls with fit-to-screen
+- Feature temporarily disabled with "Coming Soon" message
 
 **MCP Server Configuration** (McpServersPane.tsx):
 - UI for configuring Model Context Protocol servers
@@ -136,10 +125,8 @@ Primary usage in Write modes and Settings:
 - Animated title acts as home navigation link
 
 ### Graph Visualization
-- Uses Cytoscape.js with custom styling for node types (Person, Organization, Location, Event)
-- Edge weights influence layout spacing and elasticity
-- Distance layout mode calculates graph distances from selected node
-- Fact-based edges display relationship details
+- Currently displays placeholder message
+- Feature temporarily unavailable pending reimplementation
 
 ### Write Mode Architecture
 - Mode selector switches between Episode, Ideation, and Ontology
@@ -153,4 +140,4 @@ Primary usage in Write modes and Settings:
 - **Environment Variables**: API URL configurable via `VITE_API_URL`
 - **TypeScript**: Strict mode enabled, all components fully typed
 - **Hot Reload**: Vite HMR enabled for rapid development
-- **Graph Performance**: Cytoscape layouts limited to 100 nodes for initial load
+- **API Architecture**: Clean separation between generated SDK and manual setup

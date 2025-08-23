@@ -12,16 +12,15 @@ import {
   Collapse,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
-import { createEpisode } from '../../../../shared/api/client';
-import type { EpisodeRequest } from '../../../../types/graphiti';
+// Episode creation functionality temporarily disabled
 
 const EpisodeMode = () => {
   const [name, setName] = useState('');
   const [content, setContent] = useState('');
   const [sourceDescription, setSourceDescription] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, _setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [success, _setSuccess] = useState(false);
 
   // Load draft on mount
   useEffect(() => {
@@ -40,7 +39,7 @@ const EpisodeMode = () => {
     localStorage.setItem('episode-draft', JSON.stringify(draft));
   }, [name, content, sourceDescription]);
 
-  const validateForm = (): boolean => {
+  const _validateForm = (): boolean => {
     if (!name.trim()) {
       setError('Episode name is required');
       return false;
@@ -62,30 +61,9 @@ const EpisodeMode = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-
-    if (!validateForm()) return;
-
-    setIsSubmitting(true);
-
-    try {
-      const episodeData: EpisodeRequest = {
-        name: name.trim(),
-        content: content.trim(),
-        source_description: sourceDescription.trim() || undefined,
-      };
-
-      await createEpisode(episodeData);
-      setSuccess(true);
-      resetForm();
-
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsSubmitting(false);
-    }
+    setError(
+      'Episode creation is not yet implemented. This feature is coming soon.'
+    );
   };
 
   return (
@@ -164,10 +142,11 @@ const EpisodeMode = () => {
             <Button
               type="submit"
               variant="contained"
-              disabled={isSubmitting}
+              disabled={false}
               size="large"
+              title="Episode creation coming soon"
             >
-              {isSubmitting ? 'Creating...' : 'Create Episode'}
+              Create Episode (Coming Soon)
             </Button>
 
             <Button

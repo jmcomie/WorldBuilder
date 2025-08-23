@@ -6,69 +6,23 @@ const AdvancedPane = () => {
       <h3 className="settings-pane-title">Advanced Settings</h3>
 
       <section className="settings-section">
-        <h4 className="settings-section-title">Database</h4>
-
-        <div className="settings-item">
-          <label className="settings-label">
-            <span className="settings-label-text">Neo4j connection</span>
-            <span className="settings-label-description">
-              Database connection string
-            </span>
-          </label>
-          <input
-            type="text"
-            className="settings-input settings-input-monospace"
-            defaultValue="bolt://localhost:7688"
-            disabled
-          />
-        </div>
-
-        <div className="settings-item">
-          <label className="settings-label">
-            <span className="settings-label-text">Connection timeout</span>
-            <span className="settings-label-description">
-              Maximum time to wait for database connection (ms)
-            </span>
-          </label>
-          <input
-            type="number"
-            className="settings-input"
-            defaultValue={5000}
-            min={1000}
-            max={30000}
-            step={1000}
-          />
-        </div>
-      </section>
-
-      <section className="settings-section">
         <h4 className="settings-section-title">Performance</h4>
 
         <div className="settings-item">
           <label className="settings-label">
-            <span className="settings-label-text">Graph render limit</span>
+            <span className="settings-label-text">Cache duration</span>
             <span className="settings-label-description">
-              Maximum nodes to display at once
+              How long to cache API responses (minutes)
             </span>
           </label>
           <input
             type="number"
             className="settings-input"
-            defaultValue={100}
-            min={10}
-            max={1000}
-            step={10}
+            defaultValue={5}
+            min={1}
+            max={60}
+            step={1}
           />
-        </div>
-
-        <div className="settings-item">
-          <label className="settings-label">
-            <span className="settings-label-text">Enable WebGL</span>
-            <span className="settings-label-description">
-              Use hardware acceleration for graph rendering
-            </span>
-          </label>
-          <input type="checkbox" className="settings-checkbox" defaultChecked />
         </div>
       </section>
 
