@@ -14,6 +14,8 @@
     "preview": "vite preview",
     "prepare": "husky",
     "api:generate": "openapi-ts",
+    "api:generate:file": "openapi-ts -i",
+    "api:generate:url": "openapi-ts -i",
     "api:generate:watch": "openapi-ts --watch",
     "api:validate": "openapi-ts --dry-run"
   },
