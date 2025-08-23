@@ -38,6 +38,6 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health.router, tags=["health"])
-app.include_router(episodes.router, tags=["episodes"])
-app.include_router(search.router, tags=["search"])
-app.include_router(graph.router, tags=["graph"])
+#app.include_router(episodes.router, tags=["episodes"])
+#app.include_router(search.router, tags=["search"])
+#app.include_router(graph.router, tags=["graph"])
