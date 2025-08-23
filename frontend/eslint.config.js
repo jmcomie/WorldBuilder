@@ -10,7 +10,13 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config([
   {
-    ignores: ['dist/**', 'node_modules/**', '*.min.js', 'coverage/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      '*.min.js',
+      'coverage/**',
+      'src/shared/api/sdk/**', // Skip linting generated SDK code
+    ],
   },
   {
     files: ['**/*.{ts,tsx,js,jsx}'],
